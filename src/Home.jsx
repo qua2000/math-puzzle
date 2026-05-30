@@ -1,0 +1,78 @@
+import { useNavigate } from 'react-router-dom'
+
+const levels = [
+  {
+    title: 'Level 1',
+    steps: [
+      { label: 'Step 1', path: '/step1' },
+      { label: 'Step 2', path: '/step2' },
+    ],
+  },
+  {
+    title: 'Level 2',
+    steps: [
+      { label: 'Step 3', path: '/step3' },
+      { label: 'Step 4', path: '/step4' },
+    ],
+  },
+  {
+    title: 'Level 3',
+    steps: [],
+    locked: true,
+  },
+]
+
+export default function Home() {
+  const navigate = useNavigate()
+
+  return (
+    <div style={{
+      padding: '40px 30px',
+      maxWidth: '600px',
+      margin: '0 auto',
+      fontFamily: 'sans-serif',
+    }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '40px' }}>
+        Math Puzzle
+      </h1>
+
+      {levels.map((level) => (
+        <div key={level.title} style={{
+          marginBottom: '30px',
+          border: '1px solid #444',
+          borderRadius: '12px',
+          padding: '20px',
+          opacity: level.locked ? 0.4 : 1,
+        }}>
+          <div style={{ marginBottom: '12px' }}>
+            <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#4db8ff' }}>
+              {level.title}
+            </span>
+            {level.locked && <span style={{ marginLeft: '8px' }}>🔒</span>}
+          </div>
+
+          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+            {level.steps.map((step) => (
+              <button
+                key={step.path}
+                onClick={() => navigate(step.path)}
+                style={{
+                  padding: '14px 28px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: '#1a6ef5',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                }}
+              >
+                {step.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}

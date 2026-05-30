@@ -4,6 +4,7 @@ import 'katex/dist/katex.min.css'
 import katex from 'katex'
 //import { BlockMath } from 'react-katex'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 
 const DiffAnim = ({ n }) => {
   const [step, setStep] = useState(0)
@@ -89,7 +90,7 @@ const BlockMath = ({ math }) => {
   return <div dangerouslySetInnerHTML={{ __html: html }} />
 }
 
-function App() {
+function Step1() {
 
   // ランダム整数生成
   const randomInt = (min, max) => {
@@ -104,7 +105,9 @@ function App() {
   // 問題生成
   const generateProblem = () => {
 
-    const n = randomInt(2, 9)
+    // サンプルのx²とx⁵を除外
+    const candidates = [3, 4, 6, 7, 8, 9]
+    const n = candidates[randomInt(0, candidates.length - 1)]
 
     const correct = `${n}x^{${n - 1}}`
 
@@ -133,7 +136,7 @@ function App() {
     }
   }
 
-
+  const navigate = useNavigate()
   const [problem, setProblem] = useState(generateProblem())
   const [message, setMessage] = useState('')
   const [selectedAnswer, setSelectedAnswer] = useState(null)
@@ -167,67 +170,88 @@ function App() {
   setProblem(generateProblem())
   }
   
-
   return (
-    <div style={{ padding: '30px' }}>
+    <div style={{
+      padding: '20px',
+      maxWidth: '700px',
+      margin: '0 auto',
+      fontFamily: 'sans-serif',
+    }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>Math Puzzle</h1>
 
-      <h1>Math Puzzle</h1>
+      {/* 例示エリア */}
+      <div style={{
+        background: '#1a1a2e',
+        border: '1px solid #444',
+        borderRadius: '12px',
+        padding: '16px 24px',
+        marginBottom: '24px',
+      }}>
+        <BlockMath math={"D(x^2)=2x"} />
+        <BlockMath math={"(x^2)'=2x"} />
+        <BlockMath math={String.raw`\frac{d}{dx}(x^2)=2x`} />
+        <BlockMath math={"D(x^5)=5x^4"} />
+        <BlockMath math={"(x^5)'=5x^4"} />
+        <BlockMath math={String.raw`\frac{d}{dx}(x^5)=5x^4`} />
+      </div>
 
-      <BlockMath math={"D(x^2)=2x"} />
-      <BlockMath math={"(x^2)'=2x"} />
-      <BlockMath math={String.raw`\frac{d}{dx}(x^2)=2x`} /> 
+      {/* 問題エリア */}
+      <div style={{
+        background: '#0d2137',
+        border: '2px solid #4db8ff',
+        borderRadius: '12px',
+        padding: '16px 24px',
+        marginBottom: '24px',
+        fontSize: '28px',
+      }}>
+        <BlockMath math={problem.question} />
+      </div>
 
-      <BlockMath math={"D(x^5)=5x^4"} />
-      <BlockMath math={"(x^5)'=5x^4"} />
-      <BlockMath math={String.raw`\frac{d}{dx}(x^5)=5x^4`} />
-     
-      
-      <br />
-
-      <BlockMath math={problem.question} />
-
-      <div
-        style={{
-          display: 'flex',
-          gap: '10px',
-          flexWrap: 'wrap'
-        }}
-      >
+      {/* 選択肢 */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        flexWrap: 'wrap',
+        marginBottom: '24px',
+      }}>
         {problem.choices.map((choice) => (
           <button
             key={choice}
             onClick={() => checkAnswer(choice)}
             style={{
-              padding: '10px 20px',
-              fontSize: '20px',
-
+              padding: '12px 20px',
+              fontSize: '22px',
+              borderRadius: '10px',
+              border: '2px solid #555',
+              cursor: 'pointer',
               backgroundColor:
                 selectedAnswer === choice
-                  ? choice === problem.correct
-                    ? 'lightgreen'
-                    : 'fuchsia' //'#ff9999'
-                  : 'blue' //'white'
+                  ? choice === problem.correct ? '#2d6a2d' : '#6a2d2d'
+                  : '#2a2a3e',
+              color: 'white',
+              minWidth: '80px',
+              textAlign: 'center',
             }}
->
+          >
             <BlockMath math={choice} />
           </button>
         ))}
       </div>
 
-      <h2>{message}</h2>
+      {/* メッセージ */}
+      <h2 style={{ textAlign: 'center', fontSize: '48px', margin: '0 0 16px' }}>
+        {message}
+      </h2>
+
+      {/* アニメーション */}
       <AnimatePresence>
         {showAnim && (
-          <motion.div
-            key={animN}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+          <motion.div key={animN} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <DiffAnim n={animN} />
           </motion.div>
         )}
       </AnimatePresence>
-      
+
       <AnimatePresence>
         {hint && (
           <motion.p
@@ -243,18 +267,44 @@ function App() {
         )}
       </AnimatePresence>
 
-      <button onClick={nextProblem}>
-        Next
-      </button>
-      <hr />
-      <a href="#/step2">→ Step 2</a>
-      <a href="#/step3">→ Step 3</a>
-      <a href="#/step4">→ Step 4</a>
+      {/* ボタンエリア */}
+      <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+        <button
+          onClick={nextProblem}
+          style={{
+            padding: '14px 32px',
+            fontSize: '18px',
+            borderRadius: '10px',
+            border: 'none',
+            backgroundColor: '#1a6ef5',
+            color: 'white',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+          }}
+        >
+          Next
+        </button>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            padding: '14px 32px',
+            fontSize: '18px',
+            borderRadius: '10px',
+            border: '1px solid #555',
+            backgroundColor: 'transparent',
+            color: '#aaa',
+            cursor: 'pointer',
+          }}
+        >
+          ← Home
+        </button>
+      </div>
 
     </div>
   )
+  
 }
 
-export default App
+export default Step1
 
 

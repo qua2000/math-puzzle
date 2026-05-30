@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import 'katex/dist/katex.min.css'
 import katex from 'katex'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
 
 const BlockMath = ({ math }) => {
   const html = katex.renderToString(math, { throwOnError: false, displayMode: true })
@@ -159,6 +160,7 @@ const DiffAnimB = ({ type, c }) => {
 
 export default function Step2() {
   const [count, setCount]                   = useState(0)
+  const navigate = useNavigate()
   const [problem, setProblem]               = useState(generateProblemA())
   const [message, setMessage]               = useState('')
   const [selectedAnswer, setSelectedAnswer] = useState(null)
@@ -194,30 +196,65 @@ export default function Step2() {
   const examples  = group === 'A' ? examplesA : examplesB
 
   return (
-    <div style={{ padding: '30px' }}>
-      <h1>Math Puzzle – Step 2</h1>
+    <div style={{
+      padding: '20px',
+      maxWidth: '700px',
+      margin: '0 auto',
+      fontFamily: 'sans-serif',
+    }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>Math Puzzle – Step 2</h1>
 
-      <AnimatePresence mode="wait">
-        <motion.div key={group} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
-          {examples.map((ex) => <BlockMath key={ex} math={ex} />)}
-        </motion.div>
-      </AnimatePresence>
+      {/* 例示エリア */}
+      <div style={{
+        background: '#1a1a2e',
+        border: '1px solid #444',
+        borderRadius: '12px',
+        padding: '16px 24px',
+        marginBottom: '24px',
+      }}>
+        <AnimatePresence mode="wait">
+          <motion.div key={group} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}>
+            {examples.map((ex) => <BlockMath key={ex} math={ex} />)}
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-      <br />
+      {/* 問題エリア */}
+      <div style={{
+        background: '#0d2137',
+        border: '2px solid #4db8ff',
+        borderRadius: '12px',
+        padding: '16px 24px',
+        marginBottom: '24px',
+        fontSize: '28px',
+      }}>
+        <BlockMath math={problem.question} />
+      </div>
 
-      <BlockMath math={problem.question} />
-
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+      {/* 選択肢 */}
+      <div style={{
+        display: 'flex',
+        gap: '12px',
+        flexWrap: 'wrap',
+        marginBottom: '24px',
+      }}>
         {problem.choices.map((choice) => (
           <button
             key={choice}
             onClick={() => checkAnswer(choice)}
             style={{
-              padding: '10px 20px', fontSize: '20px',
+              padding: '12px 20px',
+              fontSize: '22px',
+              borderRadius: '10px',
+              border: '2px solid #555',
+              cursor: 'pointer',
               backgroundColor:
                 selectedAnswer === choice
-                  ? choice === problem.correct ? 'lightgreen' : 'fuchsia'
-                  : 'blue',
+                  ? choice === problem.correct ? '#2d6a2d' : '#6a2d2d'
+                  : '#2a2a3e',
+              color: 'white',
+              minWidth: '80px',
+              textAlign: 'center',
             }}
           >
             <BlockMath math={choice} />
@@ -225,8 +262,12 @@ export default function Step2() {
         ))}
       </div>
 
-      <h2>{message}</h2>
+      {/* メッセージ */}
+      <h2 style={{ textAlign: 'center', fontSize: '48px', margin: '0 0 16px' }}>
+        {message}
+      </h2>
 
+      {/* アニメーション */}
       <AnimatePresence>
         {showAnim && (
           <motion.div key={problem.question} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -238,7 +279,39 @@ export default function Step2() {
         )}
       </AnimatePresence>
 
-      <button onClick={nextProblem}>Next</button>
+      {/* ボタンエリア */}
+      <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+        <button
+          onClick={nextProblem}
+          style={{
+            padding: '14px 32px',
+            fontSize: '18px',
+            borderRadius: '10px',
+            border: 'none',
+            backgroundColor: '#1a6ef5',
+            color: 'white',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+          }}
+        >
+          Next
+        </button>
+        <button
+          onClick={() => navigate('/')}
+          style={{
+            padding: '14px 32px',
+            fontSize: '18px',
+            borderRadius: '10px',
+            border: '1px solid #555',
+            backgroundColor: 'transparent',
+            color: '#aaa',
+            cursor: 'pointer',
+          }}
+        >
+          ← Home
+        </button>
+      </div>
+
     </div>
   )
 }
