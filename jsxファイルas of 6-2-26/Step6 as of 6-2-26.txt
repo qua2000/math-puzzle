@@ -1,0 +1,232 @@
+Set6 as of 6-2-26
+
+import { useState } from 'react'
+import 'katex/dist/katex.min.css'
+import katex from 'katex'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useNavigate } from 'react-router-dom'
+
+const BlockMath = ({ math }) => {
+  const html = katex.renderToString(math, { throwOnError: false, displayMode: true })
+  return <div dangerouslySetInnerHTML={{ __html: html }} />
+}
+
+const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
+const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5)
+
+const generateProblem = () => {
+  // x^n · (ax+b) 型
+  const n  = randomInt(2, 5)
+  const a  = randomInt(1, 5)
+  const b  = randomInt(1, 9) * (randomInt(0,1) === 0 ? 1 : -1)
+
+  // f = x^n, g = ax+b
+  const fStr  = `x^{${n}}`
+  const gStr  = b >= 0 ? `${a}x+${b}` : `${a}x${b}`
+
+  // D(f) = nx^{n-1}
+  const df     = n === 2 ? `${n}x` : `${n}x^{${n-1}}`
+  const dfVal  = n * 1  // 係数
+
+  // D(g) = a
+  const dg     = `${a}`
+
+  // 最終答：D(f)·g + f·D(g) = nx^{n-1}·(ax+b) + x^n·a
+  // 展開：a·n·x^n + b·n·x^{n-1} + a·x^n = (an+a)x^n + bn·x^{n-1}
+  const coef1 = a * n + a   // x^n の係数
+  const coef2 = b * n       // x^{n-1} の係数
+  const finalStr = coef2 === 0
+    ? `${coef1}x^{${n}}`
+    : coef2 > 0
+    ? `${coef1}x^{${n}}+${coef2}x^{${n-1}}`
+    : `${coef1}x^{${n}}${coef2}x^{${n-1}}`
+
+  // 問1の選択肢：D(f)=nx^{n-1}
+  const df_wrong1 = `${n}x^{${n}}`         // 指数-1忘れ
+  const df_wrong2 = n === 2 ? `x` : `x^{${n-1}}`  // 係数忘れ
+  const df_wrong3 = `${n+1}x^{${n-1}}`    // 係数が違う
+
+  // 問2の選択肢：D(g)=a
+  const dg_wrong1 = `${a}x`    // 微分しない
+  const dg_wrong2 = `0`        // 定数と間違える
+  const dg_wrong3 = `${a+1}`   // 係数が違う
+
+  // 問3の選択肢：最終答
+  const final_wrong1 = coef2 > 0
+    ? `${coef1}x^{${n}}+${coef2}x^{${n}}`    // 指数-1忘れ
+    : `${coef1}x^{${n}}${coef2}x^{${n}}`
+  const final_wrong2 = coef2 > 0
+    ? `${coef1+1}x^{${n}}+${coef2}x^{${n-1}}` // 係数違い
+    : `${coef1+1}x^{${n}}${coef2}x^{${n-1}}`
+  const final_wrong3 = `${a*n}x^{${n}}+${b*n}x^{${n-1}}` // D(f)·g部分だけ
+
+  return {
+    fStr, gStr, df, dg, finalStr,
+    question: `D(x^{${n}} \\cdot (${gStr}))`,
+    // 3問セット
+    q1: {
+      question: `D(${fStr})=?`,
+      correct: df,
+      choices: shuffleArray([df, df_wrong1, df_wrong2, df_wrong3]),
+    },
+    q2: {
+      question: `D(${gStr})=?`,
+      correct: dg,
+      choices: shuffleArray([dg, dg_wrong1, dg_wrong2, dg_wrong3]),
+    },
+    q3: {
+      question: `D(${fStr}) \\cdot (${gStr}) + ${fStr} \\cdot D(${gStr})=?`,
+      correct: finalStr,
+      choices: shuffleArray([finalStr, final_wrong1, final_wrong2, final_wrong3]),
+    },
+  }
+}
+
+export default function Step6() {
+  const navigate = useNavigate()
+  const [problem, setProblem]   = useState(generateProblem())
+  const [phase, setPhase]       = useState(1)   // 1, 2, 3
+  const [answers, setAnswers]   = useState({})  // {1: '...', 2: '...', 3: '...'}
+  const [message, setMessage]   = useState('')
+
+  const currentQ = phase === 1 ? problem.q1 : phase === 2 ? problem.q2 : problem.q3
+  const selected = answers[phase]
+
+  const checkAnswer = (answer) => {
+    if (selected !== undefined) return
+    setAnswers(prev => ({ ...prev, [phase]: answer }))
+    if (answer === currentQ.correct) {
+      setMessage('⭕')
+    } else {
+      setMessage('❌')
+    }
+  }
+
+  const nextPhase = () => {
+    if (phase < 3) {
+      setPhase(phase + 1)
+      setMessage('')
+    }
+  }
+
+  const nextProblem = () => {
+    setPhase(1)
+    setAnswers({})
+    setMessage('')
+    setProblem(generateProblem())
+  }
+
+  const examples = [
+    String.raw`\boxed{\times = \cdot}`,
+    String.raw`D\{f \cdot g\} = D(f) \cdot g + f \cdot D(g)`,
+    String.raw`\,`,
+    String.raw`\begin{aligned} D\{x^2 \cdot (3x+1)\} &= D(x^2) \cdot (3x+1) + x^2 \cdot D(3x+1) \\ &= 2x(3x+1) + x^2 \cdot 3 \\ &= 6x^2+2x+3x^2 \\ &= 9x^2+2x \end{aligned}`,
+  ]
+
+  const btnStyle = (choice) => ({
+    padding: '12px 20px',
+    fontSize: '20px',
+    borderRadius: '10px',
+    border: '2px solid #555',
+    cursor: 'pointer',
+    backgroundColor:
+      selected === choice
+        ? choice === currentQ.correct ? '#2d6a2d' : '#6a2d2d'
+        : '#2a2a3e',
+    color: 'white',
+    minWidth: '80px',
+    textAlign: 'center',
+  })
+
+  return (
+    <div style={{ padding: '20px', maxWidth: '700px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+      <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>Math Puzzle – Step 6</h1>
+
+      {/* 例示エリア */}
+      <div style={{
+        background: '#1a1a2e', border: '1px solid #444',
+        borderRadius: '12px', padding: '16px 24px', marginBottom: '24px',
+      }}>
+        {examples.map((ex) => <BlockMath key={ex} math={ex} />)}
+      </div>
+
+      {/* 問題タイトル */}
+      <div style={{
+        background: '#0d2137', border: '2px solid #4db8ff',
+        borderRadius: '12px', padding: '16px 24px', marginBottom: '16px',
+      }}>
+        <BlockMath math={problem.question} />
+
+        {/* フェーズ表示 */}
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          {[1,2,3].map(i => (
+            <div key={i} style={{
+              width: '32px', height: '8px', borderRadius: '4px',
+              backgroundColor: i <= phase ? '#4db8ff' : '#333',
+            }} />
+          ))}
+        </div>
+      </div>
+
+      {/* 現在の問い */}
+      <div style={{
+        background: '#1a2a1a', border: '2px solid #4dff88',
+        borderRadius: '12px', padding: '16px 24px', marginBottom: '16px',
+      }}>
+        {/* 答えた問の履歴表示 */}
+        {phase >= 2 && (
+          <div style={{ color: '#aaa', marginBottom: '8px' }}>
+            <BlockMath math={`D(${problem.fStr}) = ${problem.df}`} />
+          </div>
+        )}
+        {phase >= 3 && (
+          <div style={{ color: '#aaa', marginBottom: '8px' }}>
+            <BlockMath math={`D(${problem.gStr}) = ${problem.dg}`} />
+          </div>
+        )}
+        <BlockMath math={currentQ.question} />
+      </div>
+
+      {/* 選択肢 */}
+      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
+        {currentQ.choices.map((choice) => (
+          <button key={choice} onClick={() => checkAnswer(choice)} style={btnStyle(choice)}>
+            <BlockMath math={choice} />
+          </button>
+        ))}
+      </div>
+
+      {/* メッセージ */}
+      <h2 style={{ textAlign: 'center', fontSize: '48px', margin: '0 0 16px' }}>{message}</h2>
+
+      {/* ボタン */}
+      <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+        {selected !== undefined && phase < 3 && (
+          <button onClick={nextPhase} style={{
+            padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
+            border: 'none', backgroundColor: '#1a6ef5', color: 'white',
+            cursor: 'pointer', fontWeight: 'bold',
+          }}>
+            Next →
+          </button>
+        )}
+        {selected !== undefined && phase === 3 && (
+          <button onClick={nextProblem} style={{
+            padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
+            border: 'none', backgroundColor: '#1a6ef5', color: 'white',
+            cursor: 'pointer', fontWeight: 'bold',
+          }}>
+            Next
+          </button>
+        )}
+        <button onClick={() => navigate('/')} style={{
+          padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
+          border: '1px solid #555', backgroundColor: 'transparent',
+          color: '#aaa', cursor: 'pointer',
+        }}>
+          ← Home
+        </button>
+      </div>
+    </div>
+  )
+}

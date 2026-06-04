@@ -17,9 +17,17 @@ const levels = [
   },
   {
     title: 'Level 3',
-    steps: [],
-    locked: true,
+    steps: [
+      { label: 'Step 5', path: '/step5' },
+      { label: 'Step 6', path: '/step6' },
+      { label: 'Step 7', path: '/step7' },
+      { label: 'Step 8', path: '/step8' },
+    ],
   },
+]
+
+const warmups = [
+  { label: 'WarmUp 1', path: '/warmup1' },
 ]
 
 export default function Home() {
@@ -36,6 +44,42 @@ export default function Home() {
         Math Puzzle
       </h1>
 
+      {/* ── WarmUp セクション ── */}
+      <div style={{
+        marginBottom: '30px',
+        border: '1px solid #555',
+        borderRadius: '12px',
+        padding: '20px',
+        background: '#1a1a1a',
+      }}>
+        <div style={{ marginBottom: '12px' }}>
+          <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#aaffaa' }}>
+            🧩 Warm Up
+          </span>
+        </div>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          {warmups.map((w) => (
+            <button
+              key={w.path}
+              onClick={() => navigate(w.path)}
+              style={{
+                padding: '14px 28px',
+                borderRadius: '8px',
+                border: 'none',
+                backgroundColor: '#2a6a2a',
+                color: 'white',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: 'bold',
+              }}
+            >
+              {w.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Level セクション ── */}
       {levels.map((level) => (
         <div key={level.title} style={{
           marginBottom: '30px',
