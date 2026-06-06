@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 const levels = [
@@ -26,12 +27,40 @@ const levels = [
   },
 ]
 
-const warmups = [
-  { label: 'WarmUp 1', path: '/warmup1' },
-]
+// ── Coming Soon ポップアップ ─────────────────────────────
+const ComingSoonPopup = ({ label, onClose }) => (
+  <div onClick={onClose} style={{
+    position: 'fixed', inset: 0,
+    background: 'rgba(0,0,0,0.6)',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    zIndex: 1000,
+  }}>
+    <div onClick={e => e.stopPropagation()} style={{
+      background: '#1a1a2e',
+      border: '2px solid #888',
+      borderRadius: '16px',
+      padding: '32px 40px',
+      textAlign: 'center',
+    }}>
+      <div style={{ fontSize: '48px', marginBottom: '12px' }}>🚧</div>
+      <div style={{ fontSize: '22px', fontWeight: 'bold', color: 'white', marginBottom: '8px' }}>
+        Coming Soon
+      </div>
+      <div style={{ color: '#aaa', fontSize: '14px', marginBottom: '20px' }}>
+        {label} は準備中です
+      </div>
+      <button onClick={onClose} style={{
+        padding: '10px 28px', borderRadius: '8px', border: 'none',
+        backgroundColor: '#1a6ef5', color: 'white',
+        fontSize: '15px', cursor: 'pointer', fontWeight: 'bold',
+      }}>OK</button>
+    </div>
+  </div>
+)
 
 export default function Home() {
   const navigate = useNavigate()
+  const [popup, setPopup] = useState(null) // null or label string
 
   return (
     <div style={{
@@ -40,9 +69,9 @@ export default function Home() {
       margin: '0 auto',
       fontFamily: 'sans-serif',
     }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '40px' }}>
-        Math Puzzle
-      </h1>
+      {popup && <ComingSoonPopup label={popup} onClose={() => setPopup(null)} />}
+
+      <h1 style={{ textAlign: 'center', marginBottom: '40px' }}>Math Puzzle</h1>
 
       {/* ── WarmUp セクション ── */}
       <div style={{
@@ -58,24 +87,39 @@ export default function Home() {
           </span>
         </div>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          {warmups.map((w) => (
-            <button
-              key={w.path}
-              onClick={() => navigate(w.path)}
-              style={{
-                padding: '14px 28px',
-                borderRadius: '8px',
-                border: 'none',
-                backgroundColor: '#2a6a2a',
-                color: 'white',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: 'bold',
-              }}
-            >
-              {w.label}
-            </button>
-          ))}
+          {/* WarmUp1 ボタン（実装済み） */}
+          <button
+            onClick={() => navigate('/warmup1')}
+            style={{
+              padding: '14px 28px',
+              borderRadius: '8px',
+              border: 'none',
+              backgroundColor: '#2a6a2a',
+              color: 'white',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+            }}
+          >
+            WarmUp 1
+          </button>
+
+          {/* WarmUp2 ボタン（Coming Soon） */}
+          <button
+            onClick={() => setPopup('📘 WarmUp 2')}
+            style={{
+              padding: '14px 28px',
+              borderRadius: '8px',
+              border: '1px dashed #667766',
+              backgroundColor: '#1a2a1a',
+              color: '#667766',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: 'bold',
+            }}
+          >
+            WarmUp 2
+          </button>
         </div>
       </div>
 
@@ -94,7 +138,6 @@ export default function Home() {
             </span>
             {level.locked && <span style={{ marginLeft: '8px' }}>🔒</span>}
           </div>
-
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
             {level.steps.map((step) => (
               <button
