@@ -104,15 +104,15 @@ export default function Home() {
             WarmUp 1
           </button>
 
-          {/* WarmUp2 ボタン（実装済み）← 6-7-26 Coming Soonから変更 */}
+          {/* WarmUp2 ボタン（Coming Soon） */}
           <button
-            onClick={() => navigate('/warmup2')}
+            onClick={() => setPopup('📘 WarmUp 2')}
             style={{
               padding: '14px 28px',
               borderRadius: '8px',
-              border: 'none',
-              backgroundColor: '#2a6a2a',
-              color: 'white',
+              border: '1px dashed #667766',
+              backgroundColor: '#1a2a1a',
+              color: '#667766',
               cursor: 'pointer',
               fontSize: '16px',
               fontWeight: 'bold',
@@ -120,75 +120,9 @@ export default function Home() {
           >
             WarmUp 2
           </button>
-          {/* WarmUp3 ボタン（実装済み）← 6-12-26 追加 */}
-          <button
-            onClick={() => navigate('/warmup3')}
-            style={{
-              padding: '14px 28px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: '#2a6a2a',
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: 'bold',
-            }}
-          >
-            WarmUp 3
-          </button>
         </div>
       </div>
 
-      {/* ── Prep セクション ── */}
-      <div style={{
-        marginBottom: '30px',
-        border: '1px solid #555',
-        borderRadius: '12px',
-        padding: '20px',
-        background: '#1a1a1a',
-      }}>
-        <div style={{ marginBottom: '12px' }}>
-          <span style={{ fontSize: '22px', fontWeight: 'bold', color: '#ffdd88' }}>
-            📘 Prep
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          {/* Prep1 ボタン（実装済み）← 6-14-26 追加 */}
-          <button
-            onClick={() => navigate('/prep1')}
-            style={{
-              padding: '14px 28px',
-              borderRadius: '8px',
-              border: 'none',
-              backgroundColor: '#6a4a1a',
-              color: 'white',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: 'bold',
-            }}
-          >
-            Prep 1
-          </button>
-          {/* Prep2・Prep3は準備中 */}
-          <button
-            onClick={() => setPopup('Prep 2')}
-            style={{
-              padding: '14px 28px', borderRadius: '8px', border: 'none',
-              backgroundColor: '#333', color: '#888',
-              cursor: 'pointer', fontSize: '16px', fontWeight: 'bold',
-            }}
-          >📘 Prep 2</button>
-          <button
-            onClick={() => setPopup('Prep 3')}
-            style={{
-              padding: '14px 28px', borderRadius: '8px', border: 'none',
-              backgroundColor: '#333', color: '#888',
-              cursor: 'pointer', fontSize: '16px', fontWeight: 'bold',
-            }}
-          >📘 Prep 3</button>
-        </div>
-      </div>
-      
       {/* ── Level セクション ── */}
       {levels.map((level) => (
         <div key={level.title} style={{
