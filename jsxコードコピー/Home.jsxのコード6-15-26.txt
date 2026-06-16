@@ -171,13 +171,13 @@ export default function Home() {
           </button>
           {/* Prep2・Prep3は準備中 */}
           <button
-            onClick={() => navigate('/prep2')}
+            onClick={() => setPopup('Prep 2')}
             style={{
               padding: '14px 28px', borderRadius: '8px', border: 'none',
-              backgroundColor: '#6a4a1a', color: 'white',
+              backgroundColor: '#333', color: '#888',
               cursor: 'pointer', fontSize: '16px', fontWeight: 'bold',
             }}
-          >Prep 2</button>
+          >📘 Prep 2</button>
           <button
             onClick={() => setPopup('Prep 3')}
             style={{
