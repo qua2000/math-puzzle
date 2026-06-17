@@ -16,6 +16,7 @@ import WarmUp2 from './WarmUp2.jsx'   // ← 追加6-7-26
 import WarmUp3 from './WarmUp3.jsx'   // ← 追加6-12-26
 import Prep1 from './Prep1'   // ← 追加6-14-26
 import Prep2 from './Prep2'   // ← 追加6-16-26
+import Prep3 from './Prep3'  // ← 追加6-17-26
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -35,6 +36,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/warmup3" element={<WarmUp3 />} />  // ← 追加6-12-26
         <Route path="/prep1" element={<Prep1 />} />  // ← 追加6-14-26
         <Route path="/prep2" element={<Prep2 />} />  // ← 追加6-16-26
+        <Route path="/prep3" element={<Prep3 />} />  / ← 追加6-17-26
       </Routes>
     </HashRouter>
   </StrictMode>,

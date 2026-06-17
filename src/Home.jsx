@@ -179,13 +179,13 @@ export default function Home() {
             }}
           >Prep 2</button>
           <button
-            onClick={() => setPopup('Prep 3')}
+            onClick={() => navigate('/prep3')}
             style={{
               padding: '14px 28px', borderRadius: '8px', border: 'none',
-              backgroundColor: '#333', color: '#888',
+              backgroundColor: '#6a4a1a', color: 'white',
               cursor: 'pointer', fontSize: '16px', fontWeight: 'bold',
             }}
-          >📘 Prep 3</button>
+          >Prep 3</button>
         </div>
       </div>
       
