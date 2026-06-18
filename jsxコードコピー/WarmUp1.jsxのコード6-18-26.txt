@@ -140,22 +140,9 @@ const CustomKeyboard = ({ onKey, onFrac, onSlash, onDelete, onEnter, supMode, se
         {['+','-','(',')'].map(s => (
           <KeyboardKey key={s} label={s} color="sym" onClick={() => handleKey(s)} />
         ))}
-        {/* 分数モード中の「↓」（分母へ移行） */}
+        {/* 分数モード中の「/」（分母へ移行） */}
         {fracMode === 'num' && (
-          <button onClick={onSlash} style={{
-            padding: '4px 6px', minWidth: '52px', flex: 1, maxWidth: '66px',
-            borderRadius: '8px',
-            border: '1.5px solid #dd88ff55',
-            background: '#2a1a3e',
-            color: '#dd88ff',
-            fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'sans-serif',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: '1px', lineHeight: 1,
-          }}>
-            <span style={{ fontSize: '11px', borderBottom: '1.5px solid #dd88ff', paddingBottom: '1px', minWidth: '18px', textAlign: 'center' }}>□</span>
-            <span style={{ fontSize: '9px', color: '#dd88ff', marginTop: '1px' }}>↓</span>
-            <span style={{ fontSize: '11px', minWidth: '18px', textAlign: 'center' }}>□</span>
-          </button>
+          <KeyboardKey label="→分母" color="frac" onClick={onSlash} />
         )}
         {/* 通常時の指数ボタン */}
         {!fracMode && (
@@ -170,20 +157,17 @@ const CustomKeyboard = ({ onKey, onFrac, onSlash, onDelete, onEnter, supMode, se
             x<sup style={{ fontSize: '9px' }}>□</sup>
           </button>
         )}
-        {/* 分数ボタン（通常時のみ）：縦並び分数表示 */}
+        {/* 分数ボタン（通常時のみ） */}
         {!fracMode && (
           <button onClick={onFrac} style={{
-            padding: '4px 6px', minWidth: '52px', flex: 1, maxWidth: '66px',
+            padding: '11px 6px', minWidth: '52px', flex: 1, maxWidth: '66px',
             borderRadius: '8px',
             border: '1.5px solid #dd88ff55',
             background: '#2a1a3e',
             color: '#dd88ff',
             fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', fontFamily: 'sans-serif',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-            gap: '1px', lineHeight: 1,
           }}>
-            <span style={{ fontSize: '11px', borderBottom: '1.5px solid #dd88ff', paddingBottom: '1px', minWidth: '18px', textAlign: 'center' }}>a</span>
-            <span style={{ fontSize: '11px', minWidth: '18px', textAlign: 'center' }}>b</span>
+            a<span style={{ fontSize: '10px' }}>/</span>b
           </button>
         )}
       </div>
@@ -195,6 +179,16 @@ const CustomKeyboard = ({ onKey, onFrac, onSlash, onDelete, onEnter, supMode, se
       {supMode && (
         <p style={{ textAlign: 'center', fontSize: '12px', color: '#f0a500', margin: '4px 0 0' }}>
           x<sup>□</sup> →
+        </p>
+      )}
+      {fracMode === 'num' && (
+        <p style={{ textAlign: 'center', fontSize: '12px', color: '#dd88ff', margin: '4px 0 0' }}>
+          分子を入力 → 「→分母」で分母へ
+        </p>
+      )}
+      {fracMode === 'den' && (
+        <p style={{ textAlign: 'center', fontSize: '12px', color: '#dd88ff', margin: '4px 0 0' }}>
+          分母を入力 → 「✓」または続けて入力
         </p>
       )}
     </div>
@@ -282,8 +276,7 @@ const allProblems = [
       'c \\times 5 - a \\times 1=5c-a',
     ],
     question: 'd \\div 3 + b \\times 2=',
-    answer: 'd/3+2b',
-    altAnswers: ['(d)/(3)+2b'],
+    answer: '(d)/(3)+2b',
   },
   {
     samples: [
@@ -328,8 +321,6 @@ const allProblems = [
     ],
     question: 'a \\times a \\times c \\times c \\times c \\times b=',
     answer: 'a^2bc^3',
-    altAnswers: ['a^{2}bc^{3}'],
-    answerDisplay: 'a^{2}bc^{3}',
   },
   {
     samples: ['a \\times a+3=a^2+3', 'y \\times y \\times y-5=y^3-5', '6-b \\times b \\times b=6-b^3'],
@@ -443,7 +434,14 @@ const allProblems = [
   },
 ]
 
-
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
 
 function normalize(s) {
   return s.replace(/\s/g, '').toLowerCase()
@@ -452,7 +450,7 @@ function normalize(s) {
 // ── メインコンポーネント ─────────────────────────────────
 export default function WarmUp1() {
   const navigate = useNavigate()
-  const [queue, setQueue]         = useState(allProblems)
+  const [queue, setQueue]         = useState(() => shuffle(allProblems))
   const [idx, setIdx]             = useState(0)
   const [message, setMessage]     = useState('')
   const [locked, setLocked]       = useState(false)
@@ -472,14 +470,6 @@ export default function WarmUp1() {
     if (locked) return
     setMessage('')
     if (fracState) {
-      // 分母入力中に演算子が来たら分数を自動確定してtokensに追加
-      const operators = ['+', '-']
-      if (operators.includes(val) && fracState.phase === 'den' && fracState.den !== '') {
-        setTokens(ts => [...ts, { type: 'frac', num: fracState.num, den: fracState.den }, { type: 'text', val }])
-        setFracState(null)
-        return
-      }
-      // 分子・分母ともに文字として追加（x-7 のような多項式分子も正しく入力できる）
       setFracState(fs => ({
         ...fs,
         [fs.phase === 'num' ? 'num' : 'den']: (fs.phase === 'num' ? fs.num : fs.den) + val,
@@ -564,8 +554,7 @@ export default function WarmUp1() {
     // 答え文字列を生成して比較
     const userAns = normalize(inputToAnswer(finalTokens))
     const correct = normalize(problem.answer)
-    const alts = (problem.altAnswers || []).map(normalize)
-    const isCorrect = userAns === correct || alts.includes(userAns)
+    const isCorrect = userAns === correct
 
     setMessage(isCorrect ? '⭕' : '❌')
     setScore(s => ({
@@ -585,6 +574,7 @@ export default function WarmUp1() {
     setIdx(i => {
       const next = i + 1
       if (next >= queue.length) {
+        setQueue(shuffle(allProblems))
         return 0
       }
       return next
@@ -645,20 +635,9 @@ export default function WarmUp1() {
       {locked && (
         <div style={{ textAlign: 'center', marginBottom: '8px' }}>
           {message === '❌' && (
-            <div style={{ color: '#ff9999', fontSize: '16px', marginBottom: '8px' }}>
-              → <span style={{ color: 'white', display: 'inline-block' }}>
-                {problem.answerDisplay
-                  ? <span dangerouslySetInnerHTML={{ __html: katex.renderToString(problem.answerDisplay, { throwOnError: false }) }} />
-                  : problem.answer.includes('/')
-                    ? <span dangerouslySetInnerHTML={{ __html: katex.renderToString(
-                        problem.answer.replace(/\(([^)]+)\)\/\(([^)]+)\)/g, '\\dfrac{$1}{$2}')
-                                       .replace(/([^()\s]+)\/([^()\s]+)/g, '\\dfrac{$1}{$2}'),
-                        { throwOnError: false }
-                      ) }} />
-                    : <strong>{problem.answer}</strong>
-                }
-              </span>
-            </div>
+            <p style={{ color: '#ff9999', fontSize: '16px', marginBottom: '8px' }}>
+              → <strong style={{ color: 'white' }}>{problem.answer}</strong>
+            </p>
           )}
           <button onClick={handleNext} style={{
             padding: '12px 32px', fontSize: '16px', borderRadius: '10px',
