@@ -235,19 +235,19 @@ const allProblems = [
     answer: '10xy',
   },
   {
-    samples: ['(-2) \\times b \\times c=-2bc', 'a \\times (-5) \\times b=-5ab'],
+    samples: ['a \\times (-3)=-3a', '(-2) \\times b \\times c=-2bc', 'a \\times (-5) \\times b=-5ab'],
     question: 'b \\times c \\times (-4)=',
     answer: '-4bc',
     warmup2: true,
   },
   {
-    samples: ['1 \\times a=a', 'a \\times (-1) \\times b=-ab'],
+    samples: ['1 \\times a=a', 'b \\times (-1)=-b', 'a \\times (-1) \\times b=-ab'],
     question: 'b \\times c \\times (-1)=',
     answer: '-bc',
     warmup2: true,
   },
   {
-    samples: ['x \\div 3=\\dfrac{x}{3}', 'y \\div x=\\dfrac{y}{x}'],
+    samples: ['x \\div 3=\\dfrac{x}{3}', 'y \\div x=\\dfrac{y}{x}', 'a \\div (-x)=-\\dfrac{a}{x}'],
     question: '(-5) \\div c=',
     answer: '(-5)/(c)',
     warmup2: true,
@@ -315,7 +315,7 @@ const allProblems = [
     answer: 'xz^3',
   },
   {
-    samples: ['(-5) \\times y \\times y \\times y=-5y^3', 'a \\times (-4) \\times a=-4a^2'],
+    samples: ['x \\times (-2) \\times x=-2x^2', '(-5) \\times y \\times y \\times y=-5y^3', 'a \\times (-4) \\times a=-4a^2'],
     question: 'c \\times c \\times (-3)=',
     answer: '-3c^2',
     warmup2: true,
@@ -647,16 +647,15 @@ export default function WarmUp1() {
           {message === '❌' && (
             <div style={{ color: '#ff9999', fontSize: '16px', marginBottom: '8px' }}>
               → <span style={{ color: 'white', display: 'inline-block' }}>
-                {problem.answerDisplay
-                  ? <span dangerouslySetInnerHTML={{ __html: katex.renderToString(problem.answerDisplay, { throwOnError: false }) }} />
-                  : problem.answer.includes('/')
-                    ? <span dangerouslySetInnerHTML={{ __html: katex.renderToString(
-                        problem.answer.replace(/\(([^)]+)\)\/\(([^)]+)\)/g, '\\dfrac{$1}{$2}')
-                                       .replace(/([^()\s]+)\/([^()\s]+)/g, '\\dfrac{$1}{$2}'),
-                        { throwOnError: false }
-                      ) }} />
-                    : <strong>{problem.answer}</strong>
-                }
+                <span dangerouslySetInnerHTML={{ __html: katex.renderToString(
+                  problem.answerDisplay
+                    ? problem.answerDisplay
+                    : problem.answer
+                        .replace(/\(([^)]+)\)\/\(([^)]+)\)/g, '\\dfrac{$1}{$2}')
+                        .replace(/([^()\s\\]+)\/([^()\s\\]+)/g, '\\dfrac{$1}{$2}')
+                        .replace(/\^(\d+)/g, '^{$1}'),
+                  { throwOnError: false }
+                ) }} />
               </span>
             </div>
           )}
