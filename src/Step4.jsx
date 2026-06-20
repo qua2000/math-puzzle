@@ -9,6 +9,57 @@ const BlockMath = ({ math }) => {
   return <div dangerouslySetInnerHTML={{ __html: html }} />
 }
 
+// 1行で表示するための数式（Stepの→でつなぐ用）
+const InlineMath = ({ math }) => {
+  const html = katex.renderToString(math, { throwOnError: false, displayMode: false })
+  return <span dangerouslySetInnerHTML={{ __html: html }} />
+}
+
+// 問題の記号（D() / ()' / d/dx）に合わせて式を組み立てる
+const formatQ = (notation, inner) => {
+  if (notation === 'D') return `D(${inner})`
+  if (notation === 'prime') return `(${inner})'`
+  return String.raw`\frac{d}{dx}(${inner})`
+}
+
+// 「Step：A→B→C→D」を少しずつ表示していくコンポーネント
+const StepHint = ({ stages }) => {
+  const [count, setCount] = useState(1)
+
+  useEffect(() => {
+    setCount(1)
+    const timers = stages.slice(1).map((_, i) =>
+      setTimeout(() => setCount(i + 2), (i + 1) * 1000)
+    )
+    return () => timers.forEach(clearTimeout)
+  }, [stages])
+
+  return (
+    <div style={{
+      fontSize: '24px',
+      margin: '16px 0',
+      display: 'flex',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: '8px',
+      background: '#1a1a2e',
+      border: '1px solid #444',
+      borderRadius: '10px',
+      padding: '14px 18px',
+    }}>
+      <span style={{ color: '#4db8ff', fontWeight: 'bold', fontSize: '18px' }}>Step：</span>
+      {stages.slice(0, count).map((s, i) => (
+        <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {i > 0 && <span style={{ color: '#888' }}>→</span>}
+          <span style={{ color: i === count - 1 ? 'lightgreen' : 'white' }}>
+            <InlineMath math={s} />
+          </span>
+        </span>
+      ))}
+    </div>
+  )
+}
+
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
 const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5)
 
@@ -92,11 +143,16 @@ const generateProblem = () => {
 
   // 記号ランダム
   const qType = randomInt(0, 2)
-  const question = qType === 0
-    ? `D(${inner})=?`
-    : qType === 1
-    ? `(${inner})'=?`
-    : String.raw`\frac{d}{dx}(${inner})=?`
+  const notation = qType === 0 ? 'D' : qType === 1 ? 'prime' : 'dfrac'
+  const question = formatQ(notation, inner)
+
+  // ヒント用サンプル（固定例：2x⁴-3x²+5 → 実際の問題の数字とは別の値）
+  const hintStages = [
+    formatQ(notation, `2x^{4}-3x^{2}+5`),
+    `8x^{4}-6x^{2}+0`,
+    `8x^{4-1}-6x^{2-1}`,
+    `8x^{3}-6x`,
+  ]
 
   return {
     question, correct: correctStr,
@@ -104,79 +160,8 @@ const generateProblem = () => {
       .filter((v, i, a) => a.indexOf(v) === i)  // 重複除去
       .slice(0, 4)),
     terms,
+    hintStages,
   }
-}
-
-const DiffAnim = ({ terms }) => {
-  const [step, setStep] = useState(0)
-  useEffect(() => {
-    setStep(0)
-    const timers = [
-      setTimeout(() => setStep(1), 600),
-      setTimeout(() => setStep(2), 1800),
-      setTimeout(() => setStep(3), 3000),
-      setTimeout(() => setStep(4), 4200),
-    ]
-    return () => timers.forEach(clearTimeout)
-  }, [terms])
-
-  const s = {
-    wrap:  { fontSize: '26px', margin: '10px 0', display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: '2px' },
-    sup:   { fontSize: '16px', lineHeight: 1 },
-    red:   { color: '#ff4444' },
-    green: { color: 'lightgreen' },
-  }
-
-  // 固定例：2x⁴ - 3x² + 5
-  const ex = [
-    { coef: 2, exp: 4 },
-    { coef: -3, exp: 2 },
-    { coef: 5, exp: 0 },
-  ]
-  const exInner = buildExpr(ex)
-  const exResult = buildDExpr(ex)
-
-  return (
-    <div style={{ margin: '10px 0' }}>
-      {step === 0 && (
-        <div style={s.wrap}>
-          <span>D({exInner})</span>
-        </div>
-      )}
-      {step === 1 && (
-        <motion.div style={s.wrap} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <motion.span style={s.red} animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.5 }}>
-            D(2x<span style={s.sup}>4</span>)
-          </motion.span>
-          <span>+D(-3x<span style={s.sup}>2</span>)+D(5)</span>
-        </motion.div>
-      )}
-      {step === 2 && (
-        <motion.div style={s.wrap} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <motion.span style={s.red}>8x<span style={s.sup}>3</span></motion.span>
-          <span>+</span>
-          <motion.span style={s.red} animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.5 }}>
-            D(-3x<span style={s.sup}>2</span>)
-          </motion.span>
-          <span>+D(5)</span>
-        </motion.div>
-      )}
-      {step === 3 && (
-        <motion.div style={s.wrap} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-          <span style={s.red}>8x<span style={s.sup}>3</span>-6x</span>
-          <span>+</span>
-          <motion.span style={s.red} animate={{ scale: [1, 1.3, 1] }} transition={{ duration: 0.5 }}>
-            D(5)
-          </motion.span>
-        </motion.div>
-      )}
-      {step === 4 && (
-        <motion.div style={{ ...s.wrap, ...s.green }} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}>
-          <span>{exResult}</span>
-        </motion.div>
-      )}
-    </div>
-  )
 }
 
 export default function Step4() {
@@ -187,7 +172,6 @@ export default function Step4() {
   const [showAnim, setShowAnim]             = useState(false)
 
   const checkAnswer = (answer) => {
-    if (selectedAnswer !== null) return
     setSelectedAnswer(answer)
     if (answer === problem.correct) {
       setMessage('⭕')
@@ -283,11 +267,11 @@ export default function Step4() {
         {message}
       </h2>
 
-      {/* アニメーション */}
+      {/* ヒント（Stepチェーン表示） */}
       <AnimatePresence>
         {showAnim && (
           <motion.div key={problem.question} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <DiffAnim terms={problem.terms} />
+            <StepHint stages={problem.hintStages} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -328,5 +312,3 @@ export default function Step4() {
     </div>
   )
 }
-
-

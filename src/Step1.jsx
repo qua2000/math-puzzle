@@ -1,93 +1,63 @@
 import { useState, useEffect } from 'react'
-//import { useState } from 'react'
 import 'katex/dist/katex.min.css'
 import katex from 'katex'
-//import { BlockMath } from 'react-katex'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-
-const DiffAnim = ({ n }) => {
-  const [step, setStep] = useState(0)
-
-  useEffect(() => {
-    const timers = [
-      setTimeout(() => setStep(1), 500),
-      setTimeout(() => setStep(2), 1500),
-      setTimeout(() => setStep(3), 2500),
-      setTimeout(() => setStep(4), 3500),
-    ]
-    return () => timers.forEach(clearTimeout)
-  }, [n])
-
-  return (
-    <div style={{ fontSize: '32px', margin: '20px 0', position: 'relative', height: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-
-      {/* ステップ0・1：D(xⁿ) 表示、指数が光る */}
-      {step <= 1 && (
-        <div style={{ display: 'flex', alignItems: 'flex-start' }}>
-          <span>D(x</span>
-          <motion.span
-            animate={{ color: step === 1 ? '#ff4444' : 'white', scale: step === 1 ? 1.4 : 1 }}
-            transition={{ duration: 0.4 }}
-            style={{ fontSize: '20px', lineHeight: '1' }}
-          >
-            {n}
-          </motion.span>
-          <span>)</span>
-        </div>
-      )}
-
-      {/* ステップ2：nがxの前に移動 */}
-      {step === 2 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={{ display: 'flex', alignItems: 'flex-start' }}
-        >
-          <span>D(</span>
-          <motion.span style={{ color: '#ff4444' }}>{n}</motion.span>
-          <span>x</span>
-          <span style={{ fontSize: '20px' }}>{n}</span>
-          <span>)</span>
-        </motion.div>
-      )}
-
-      {/* ステップ3：指数がn-1に変化 */}
-      {step === 3 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          style={{ display: 'flex', alignItems: 'flex-start' }}
-        >
-          <span style={{ color: '#ff4444' }}>{n}</span>
-          <span>x</span>
-          <motion.span
-            style={{ fontSize: '20px', color: '#ff4444' }}
-          >
-            {n}-1
-          </motion.span>
-        </motion.div>
-      )}
-
-      {/* ステップ4：完成 */}
-      {step === 4 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          style={{ display: 'flex', alignItems: 'flex-start', color: 'lightgreen' }}
-        >
-          <span>{n}x</span>
-          <span style={{ fontSize: '20px' }}>{n - 1}</span>
-        </motion.div>
-      )}
-
-    </div>
-  )
-}
 
 const BlockMath = ({ math }) => {
   const html = katex.renderToString(math, { throwOnError: false, displayMode: true })
   return <div dangerouslySetInnerHTML={{ __html: html }} />
+}
+
+// 1行で表示するための数式（Stepの→でつなぐ用）
+const InlineMath = ({ math }) => {
+  const html = katex.renderToString(math, { throwOnError: false, displayMode: false })
+  return <span dangerouslySetInnerHTML={{ __html: html }} />
+}
+
+// 問題の記号（D() / ()' / d/dx）に合わせて式を組み立てる
+const formatQ = (notation, inner) => {
+  if (notation === 'D') return `D(${inner})`
+  if (notation === 'prime') return `(${inner})'`
+  return String.raw`\frac{d}{dx}(${inner})`
+}
+
+// 「Step：A→B→C→D」を少しずつ表示していくコンポーネント
+const StepHint = ({ stages }) => {
+  const [count, setCount] = useState(1)
+
+  useEffect(() => {
+    setCount(1)
+    const timers = stages.slice(1).map((_, i) =>
+      setTimeout(() => setCount(i + 2), (i + 1) * 1000)
+    )
+    return () => timers.forEach(clearTimeout)
+  }, [stages])
+
+  return (
+    <div style={{
+      fontSize: '24px',
+      margin: '16px 0',
+      display: 'flex',
+      alignItems: 'center',
+      flexWrap: 'wrap',
+      gap: '8px',
+      background: '#1a1a2e',
+      border: '1px solid #444',
+      borderRadius: '10px',
+      padding: '14px 18px',
+    }}>
+      <span style={{ color: '#4db8ff', fontWeight: 'bold', fontSize: '18px' }}>Step：</span>
+      {stages.slice(0, count).map((s, i) => (
+        <span key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {i > 0 && <span style={{ color: '#888' }}>→</span>}
+          <span style={{ color: i === count - 1 ? 'lightgreen' : 'white' }}>
+            <InlineMath math={s} />
+          </span>
+        </span>
+      ))}
+    </div>
+  )
 }
 
 function Step1() {
@@ -124,15 +94,24 @@ function Step1() {
 
     // ランダムに記号を選ぶ（0なら ()' 形式、1なら d/dx 形式）
     const questionType = randomInt(0, 1)
-    const question = questionType === 0
-      ? `(x^{${n}})'=?`
-      : String.raw`\frac{d}{dx}(x^{${n}})=?`
-      //: `\\frac{d}{dx}(x^{${n}})=?`
+    const notation = questionType === 0 ? 'prime' : 'dfrac'
+    const question = formatQ(notation, `x^{${n}}`)
+
+    // ヒント用のサンプル（問いのnと被らない数を使う）
+    const exampleN = n === 3 ? 4 : 3
+    const hintStages = [
+      formatQ(notation, `x^{${exampleN}}`),
+      `${exampleN}x^{${exampleN}}`,
+      `${exampleN}x^{${exampleN}-1}`,
+      `${exampleN}x^{${exampleN - 1}}`,
+    ]
 
     return {
       question: question,
       correct: correct,
-      choices: choices
+      choices: choices,
+      notation,
+      hintStages,
     }
   }
 
@@ -140,36 +119,26 @@ function Step1() {
   const [problem, setProblem] = useState(generateProblem())
   const [message, setMessage] = useState('')
   const [selectedAnswer, setSelectedAnswer] = useState(null)
-  //const [hint, setHint] = useState('')
-  const [hint, setHint] = useState('')
   const [showAnim, setShowAnim] = useState(false)
-  const [animN, setAnimN] = useState(3)
 
   const checkAnswer = (answer) => {
-  setSelectedAnswer(answer)
-  if (answer === problem.correct) {
-    setMessage('⭕')
-    setHint('')
-    setShowAnim(false)
-  } else {
-    setMessage('❌')
-    setHint('')
-    // 問いのnと被らない例を選ぶ
-    const currentN = parseInt(problem.question.match(/\d+/)[0])
-    const exampleN = currentN === 3 ? 4 : 3
-    setAnimN(exampleN)
-    setShowAnim(false)
-    setTimeout(() => setShowAnim(true), 100)
+    setSelectedAnswer(answer)
+    if (answer === problem.correct) {
+      setMessage('⭕')
+      setShowAnim(false)
+    } else {
+      setMessage('❌')
+      setShowAnim(false)
+      setTimeout(() => setShowAnim(true), 100)
+    }
   }
-}
   const nextProblem = () => {
-  setMessage('')
-  setSelectedAnswer(null)
-  setHint('')
-  setShowAnim(false)
-  setProblem(generateProblem())
+    setMessage('')
+    setSelectedAnswer(null)
+    setShowAnim(false)
+    setProblem(generateProblem())
   }
-  
+
   return (
     <div style={{
       padding: '20px',
@@ -243,27 +212,12 @@ function Step1() {
         {message}
       </h2>
 
-      {/* アニメーション */}
+      {/* ヒント（Stepチェーン表示） */}
       <AnimatePresence>
         {showAnim && (
-          <motion.div key={animN} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <DiffAnim n={animN} />
+          <motion.div key={problem.question} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <StepHint stages={problem.hintStages} />
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {hint && (
-          <motion.p
-            key="hint"
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5 }}
-            style={{ color: 'orange', fontSize: '18px' }}
-          >
-            {hint}
-          </motion.p>
         )}
       </AnimatePresence>
 
@@ -302,9 +256,7 @@ function Step1() {
 
     </div>
   )
-  
+
 }
 
 export default Step1
-
-
