@@ -22,7 +22,6 @@ const levels = [
       { label: 'Step 5', path: '/step5' },
       { label: 'Step 6', path: '/step6' },
       { label: 'Step 7', path: '/step7' },
-      { label: 'Step 8', path: '/step8' },
     ],
   },
 ]

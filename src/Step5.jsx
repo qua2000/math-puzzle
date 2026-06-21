@@ -86,52 +86,83 @@ const PrepPopup = ({ num, onClose }) => (
 // ── 問題生成 ────────────────────────────────────────────
 const generateProblem = () => {
   const n = randomInt(2, 5)
-  let m = randomInt(2, 5)
-  while (m === n) m = randomInt(2, 5)
+  const a = randomInt(1, 5)
+  const b = randomInt(1, 9) * (randomInt(0, 1) === 0 ? 1 : -1)
 
-  const dn = `${n}x^{${n-1}}`
-  const dm = `${m}x^{${m-1}}`
-  const askLeft = randomInt(0, 1) === 0
-  const correct = askLeft ? dn : dm
+  const fStr = `x^{${n}}`
+  const gStr = b >= 0 ? `${a}x+${b}` : `${a}x${b}`
 
-  const wrong1 = askLeft ? `${n}x^{${n}}`      : `${m}x^{${m}}`
-  const wrong2 = askLeft ? `x^{${n-1}}`         : `x^{${m-1}}`
-  const wrong3 = askLeft ? `${n+1}x^{${n-1}}`  : `${m+1}x^{${m-1}}`
+  const df    = n === 2 ? `${n}x` : `${n}x^{${n-1}}`
+  const dg    = `${a}`
 
-  const formulaLine = `D(x^{${n}}) \\cdot x^{${m}} + x^{${n}} \\cdot D(x^{${m}})`
-  const blankLine = askLeft
-    ? `= \\square \\cdot x^{${m}} + x^{${n}} \\cdot ${dm}`
-    : `= ${dn} \\cdot x^{${m}} + x^{${n}} \\cdot \\square`
+  const coef1 = a * n + a
+  const coef2 = b * n
+  const finalStr = coef2 === 0
+    ? `${coef1}x^{${n}}`
+    : coef2 > 0
+    ? `${coef1}x^{${n}}+${coef2}x^{${n-1}}`
+    : `${coef1}x^{${n}}${coef2}x^{${n-1}}`
+
+  const df_wrong1 = `${n}x^{${n}}`
+  const df_wrong2 = n === 2 ? `x` : `x^{${n-1}}`
+  const df_wrong3 = `${n+1}x^{${n-1}}`
+
+  const dg_wrong1 = `${a}x`
+  const dg_wrong2 = `0`
+  const dg_wrong3 = `${a+1}`
+
+  const final_wrong1 = coef2 > 0
+    ? `${coef1}x^{${n}}+${coef2}x^{${n}}`
+    : `${coef1}x^{${n}}${coef2}x^{${n}}`
+  const final_wrong2 = coef2 > 0
+    ? `${coef1+1}x^{${n}}+${coef2}x^{${n-1}}`
+    : `${coef1+1}x^{${n}}${coef2}x^{${n-1}}`
+  const final_wrong3 = `${a*n}x^{${n}}+${b*n}x^{${n-1}}`
 
   return {
-    n, m, dn, dm, askLeft,
-    formulaLine, blankLine,
-    blankQuestion: `\\square = ?`,
-    question: `D(x^{${n}} \\cdot x^{${m}})`,
-    correct,
-    choices: shuffleArray([correct, wrong1, wrong2, wrong3]),
+    fStr, gStr, df, dg, finalStr,
+    question: `D(x^{${n}} \\cdot (${gStr}))`,
+    q1: { question: `D(${fStr})=?`,  correct: df,       choices: shuffleArray([df,       df_wrong1, df_wrong2, df_wrong3]) },
+    q2: { question: `D(${gStr})=?`,  correct: dg,       choices: shuffleArray([dg,       dg_wrong1, dg_wrong2, dg_wrong3]) },
+    q3: { question: `D(${fStr}) \\cdot (${gStr}) + ${fStr} \\cdot D(${gStr})=?`,
+          correct: finalStr, choices: shuffleArray([finalStr, final_wrong1, final_wrong2, final_wrong3]) },
   }
 }
 
 // ── メインコンポーネント ─────────────────────────────────
 export default function Step5() {
   const navigate = useNavigate()
-  const [problem, setProblem]       = useState(generateProblem())
-  const [message, setMessage]       = useState('')
-  const [selectedAnswer, setSelectedAnswer] = useState(null)
-  const [prepNum, setPrepNum]       = useState(null)   // ポップアップ表示するPrep番号
+  const [problem, setProblem] = useState(generateProblem())
+  const [phase, setPhase]     = useState(1)
+  const [answers, setAnswers] = useState({})
+  const [message, setMessage] = useState('')
+  const [prepNum, setPrepNum] = useState(null)
+
+  const currentQ = phase === 1 ? problem.q1 : phase === 2 ? problem.q2 : problem.q3
+  const selected = answers[phase]
 
   const checkAnswer = (answer) => {
-    if (selectedAnswer !== null) return
-    setSelectedAnswer(answer)
-    setMessage(answer === problem.correct ? '⭕' : '❌')
+    if (selected !== undefined) return
+    setAnswers(prev => ({ ...prev, [phase]: answer }))
+    setMessage(answer === currentQ.correct ? '⭕' : '❌')
   }
 
+  const nextPhase = () => { setPhase(phase + 1); setMessage('') }
+
   const nextProblem = () => {
-    setMessage('')
-    setSelectedAnswer(null)
+    setPhase(1); setAnswers({}); setMessage('')
     setProblem(generateProblem())
   }
+
+  const btnStyle = (choice) => ({
+    padding: '12px 20px', fontSize: '20px', borderRadius: '10px',
+    border: '2px solid #555', cursor: 'pointer',
+    backgroundColor:
+      selected === choice
+        ? choice === currentQ.correct ? '#2d6a2d' : '#6a2d2d'
+        : '#2a2a3e',
+    color: 'white', minWidth: '80px', textAlign: 'center',
+  })
 
   return (
     <div style={{ padding: '20px', maxWidth: '700px', margin: '0 auto', fontFamily: 'sans-serif' }}>
@@ -142,68 +173,82 @@ export default function Step5() {
         background: '#1a1a2e', border: '1px solid #444',
         borderRadius: '12px', padding: '16px 24px', marginBottom: '24px',
       }}>
-        {/* かけ算記号説明 */}
         <BlockMath math={String.raw`\boxed{\times = \cdot}`} />
-
-        {/* 公式 */}
         <BlockMath math={String.raw`D\{f \cdot g\} = D(f) \cdot g + f \cdot D(g)`} />
         <BlockMath math={String.raw`\,`} />
 
-        {/* 例1：2x · x^3 — 途中結果に指数法則(Prep1)が必要 */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
-          <div style={{ flex: 1, minWidth: '260px' }}>
-            <BlockMath math={String.raw`\begin{aligned} D\{x^2 \cdot x^3\} &= D(x^2) \cdot x^3 + x^2 \cdot D(x^3) \\ &= 2x \cdot x^3 + x^2 \cdot 3x^2 \end{aligned}`} />
-          </div>
-          <div style={{ paddingTop: '28px' }}>
-            <PrepBadge num={1} onClick={() => setPrepNum(1)} />
-          </div>
-        </div>
+        {/*
+          例：D{x²·(3x+1)}
+          行3「2x(3x+1)」→ 分配法則が必要 → Prep2
+          行4「6x²+2x+3x²」→ 同類項計算が必要 → Prep3
+          各バッジを該当行の横に置く
+        */}
+        <div style={{ position: 'relative' }}>
+          {/* 計算式本体 */}
+          <BlockMath math={String.raw`\begin{aligned}
+            D\{x^2 \cdot (3x+1)\}
+              &= D(x^2) \cdot (3x+1) + x^2 \cdot D(3x+1) \\
+              &= 2x(3x+1) + x^2 \cdot 3 \\
+              &= 6x^2+2x+3x^2 \\
+              &= 9x^2+2x
+          \end{aligned}`} />
 
-        <BlockMath math={String.raw`\,`} />
-
-        {/* 例2：x^3 · x^4 — 同様にPrep1 */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
-          <div style={{ flex: 1, minWidth: '260px' }}>
-            <BlockMath math={String.raw`\begin{aligned} D\{x^3 \cdot x^4\} &= D(x^3) \cdot x^4 + x^3 \cdot D(x^4) \\ &= 3x^2 \cdot x^4 + x^3 \cdot 4x^3 \end{aligned}`} />
-          </div>
-          <div style={{ paddingTop: '28px' }}>
-            <PrepBadge num={1} onClick={() => setPrepNum(1)} />
+          {/*
+            バッジは式の右端に縦に並べて配置。
+            行の高さはKaTeXのレンダリングに依存するため
+            topの値で大まかに位置を合わせる。
+          */}
+          <div style={{
+            position: 'absolute', right: 0, top: 0,
+            display: 'flex', flexDirection: 'column',
+            gap: '6px', paddingTop: '60px',   /* 3行目あたり */
+          }}>
+            {/* 分配法則 → Prep2（3行目：2x(3x+1) の行） */}
+            <PrepBadge num={2} onClick={() => setPrepNum(2)} />
+            {/* 同類項   → Prep3（4行目：6x²+2x+3x²の行） */}
+            <PrepBadge num={3} onClick={() => setPrepNum(3)} />
           </div>
         </div>
       </div>
 
-      {/* 問題エリア */}
+      {/* 問題タイトル */}
       <div style={{
         background: '#0d2137', border: '2px solid #4db8ff',
-        borderRadius: '12px', padding: '16px 24px', marginBottom: '12px',
+        borderRadius: '12px', padding: '16px 24px', marginBottom: '16px',
       }}>
-        <BlockMath math={
-          `\\begin{aligned}
-            ${problem.question} &= ${problem.formulaLine} \\\\
-            &${problem.blankLine}
-          \\end{aligned}`
-        } />
-        <div style={{ textAlign: 'center', color: '#4db8ff', fontWeight: 'bold' }}>
-          <BlockMath math={problem.blankQuestion} />
+        <BlockMath math={problem.question} />
+        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+          {[1,2,3].map(i => (
+            <div key={i} style={{
+              width: '32px', height: '8px', borderRadius: '4px',
+              backgroundColor: i <= phase ? '#4db8ff' : '#333',
+            }} />
+          ))}
         </div>
+      </div>
+
+      {/* 現在の問い */}
+      <div style={{
+        background: '#1a2a1a', border: '2px solid #4dff88',
+        borderRadius: '12px', padding: '16px 24px', marginBottom: '16px',
+      }}>
+        {phase >= 2 && (
+          <div style={{ color: '#aaa', marginBottom: '8px' }}>
+            <BlockMath math={`D(${problem.fStr}) = ${problem.df}`} />
+          </div>
+        )}
+        {phase >= 3 && (
+          <div style={{ color: '#aaa', marginBottom: '8px' }}>
+            <BlockMath math={`D(${problem.gStr}) = ${problem.dg}`} />
+          </div>
+        )}
+        <BlockMath math={currentQ.question} />
       </div>
 
       {/* 選択肢 */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
-        {problem.choices.map((choice) => (
-          <button
-            key={choice}
-            onClick={() => checkAnswer(choice)}
-            style={{
-              padding: '12px 20px', fontSize: '22px', borderRadius: '10px',
-              border: '2px solid #555', cursor: 'pointer',
-              backgroundColor:
-                selectedAnswer === choice
-                  ? choice === problem.correct ? '#2d6a2d' : '#6a2d2d'
-                  : '#2a2a3e',
-              color: 'white', minWidth: '80px', textAlign: 'center',
-            }}
-          >
+        {currentQ.choices.map((choice) => (
+          <button key={choice} onClick={() => checkAnswer(choice)} style={btnStyle(choice)}>
             <BlockMath math={choice} />
           </button>
         ))}
@@ -212,26 +257,31 @@ export default function Step5() {
       {/* メッセージ */}
       <h2 style={{ textAlign: 'center', fontSize: '48px', margin: '0 0 16px' }}>{message}</h2>
 
-      {/* ボタンエリア */}
+      {/* ボタン */}
       <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-        <button
-          onClick={nextProblem}
-          style={{
+        {selected !== undefined && phase < 3 && (
+          <button onClick={nextPhase} style={{
             padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
             border: 'none', backgroundColor: '#1a6ef5', color: 'white',
             cursor: 'pointer', fontWeight: 'bold',
-          }}
-        >
-          Next
-        </button>
-        <button
-          onClick={() => navigate('/')}
-          style={{
+          }}>
+            Next →
+          </button>
+        )}
+        {selected !== undefined && phase === 3 && (
+          <button onClick={nextProblem} style={{
             padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
-            border: '1px solid #555', backgroundColor: 'transparent',
-            color: '#aaa', cursor: 'pointer',
-          }}
-        >
+            border: 'none', backgroundColor: '#1a6ef5', color: 'white',
+            cursor: 'pointer', fontWeight: 'bold',
+          }}>
+            Next
+          </button>
+        )}
+        <button onClick={() => navigate('/')} style={{
+          padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
+          border: '1px solid #555', backgroundColor: 'transparent',
+          color: '#aaa', cursor: 'pointer',
+        }}>
           ← Home
         </button>
       </div>

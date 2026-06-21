@@ -44,32 +44,29 @@ const PrepPopup = ({ num, onClose }) => (
         marginTop: '24px', padding: '10px 28px', fontSize: '16px',
         borderRadius: '10px', border: 'none', backgroundColor: '#f0a500',
         color: '#000', cursor: 'pointer', fontWeight: 'bold',
-      }}>
-        OK
-      </button>
+      }}>OK</button>
     </div>
   </div>
 )
 
-// ── 係数・指数を文字列に変換するヘルパー ────────────────
-// 係数±の符号を含む項文字列（例: +2x, -3）
-const termStr = (coef, varPart) => {
-  if (varPart === '') return `${coef}`        // 定数項
-  if (coef === 1)  return varPart
-  if (coef === -1) return `-${varPart}`
-  return `${coef}${varPart}`
+// ── 記号3種 ─────────────────────────────────────────────
+// notationType: 0=D(), 1=()', 2=d/dx()
+const notations = [0, 1, 2]
+
+const applyNotation = (type, expr) => {
+  if (type === 0) return `D(${expr})`
+  if (type === 1) return `(${expr})'`
+  return `\\dfrac{d}{dx}(${expr})`
 }
 
-// ax±b の文字列（KaTeX用）
-const linearStr = (a, b) => {
-  const bAbs = Math.abs(b)
-  const sign  = b >= 0 ? '+' : '-'
-  if (a === 1)  return b >= 0 ? `x+${b}`  : `x-${bAbs}`
-  if (a === -1) return b >= 0 ? `-x+${b}` : `-x-${bAbs}`
-  return b >= 0 ? `${a}x+${b}` : `${a}x-${bAbs}`
+const applyNotationOuter = (type, expr) => {
+  if (type === 0) return `D\\{${expr}\\}`
+  if (type === 1) return `\\{${expr}\\}'`
+  return `\\dfrac{d}{dx}\\{${expr}\\}`
 }
 
-// ax^n±b の文字列（KaTeX用）
+// ── 多項式文字列ヘルパー ─────────────────────────────────
+// ax^n ± b の文字列
 const polyStr = (a, n, b) => {
   const xPart = n === 1 ? 'x' : `x^{${n}}`
   const head  = a === 1 ? xPart : a === -1 ? `-${xPart}` : `${a}${xPart}`
@@ -78,379 +75,190 @@ const polyStr = (a, n, b) => {
   return head + tail
 }
 
-// 微分文字列 D(ax^n±b) = an·x^{n-1}（定数項は消える）
-const diffPoly = (a, n) => {
+// D(ax^n ± b) = an·x^{n-1}
+const diffPolyStr = (a, n) => {
   const coef = a * n
-  if (n === 1) return `${coef}`           // D(ax+b)=a
-  if (n === 2) return `${coef}x`          // D(ax²+b)=2ax
+  if (n === 1) return `${coef}`
+  if (n === 2) return `${coef}x`
   return `${coef}x^{${n-1}}`
 }
 
-// ── 前半問題生成：f=ax±b, g=cx±d ───────────────────────
-const generateFront = () => {
-  const a = randomInt(1, 5)
-  const b = randomInt(1, 9) * (randomInt(0,1) === 0 ? 1 : -1)
-  const c = randomInt(1, 5)
-  const d = randomInt(1, 9) * (randomInt(0,1) === 0 ? 1 : -1)
+// ── 問題生成 ────────────────────────────────────────────
+const generateProblem = () => {
+  // 記号をランダムに選ぶ
+  const notation = notations[randomInt(0, 2)]
 
-  const fStr = linearStr(a, b)
-  const gStr = linearStr(c, d)
+  // どちらを高次にするかランダム
+  const highLeft = randomInt(0, 1) === 0
 
-  const df = `${a}` // D(ax+b)=a
-  const dg = `${c}` // D(cx+d)=c
+  // 高次側: ax^n ± b (n=2 or 3)
+  const n    = randomInt(2, 3)
+  const aH   = randomInt(1, 3)
+  const bH   = randomInt(1, 5) * (randomInt(0,1) === 0 ? 1 : -1)
 
-  // 最終答: a(cx+d) + (ax+b)c = 2ac·x + (ad+bc)
-  const coefX    = 2 * a * c
-  const coefConst = a * d + b * c
-  const finalStr = coefConst === 0
-    ? `${coefX}x`
-    : coefConst > 0
-    ? `${coefX}x+${coefConst}`
-    : `${coefX}x${coefConst}`
+  // 1次側: cx ± d
+  const c    = randomInt(1, 4)
+  const d    = randomInt(1, 8) * (randomInt(0,1) === 0 ? 1 : -1)
 
-  // 問1選択肢 D(f)=a
-  const df_w1 = `${a}x`
-  const df_w2 = `${a+1}`
-  const df_w3 = `0`
+  const highStr   = polyStr(aH, n, bH)       // 高次項 文字列
+  const linearStr = polyStr(c, 1, d)          // 1次項 文字列
 
-  // 問2選択肢 D(g)=c
-  const dg_w1 = `${c}x`
-  const dg_w2 = `${c+1}`
-  const dg_w3 = `0`
+  const fStr = highLeft ? highStr  : linearStr
+  const gStr = highLeft ? linearStr : highStr
 
-  // 問3選択肢
-  const fin_w1 = coefConst > 0
-    ? `${coefX+1}x+${coefConst}` : `${coefX+1}x${coefConst}`
-  const fin_w2 = coefConst > 0
-    ? `${a*c}x+${coefConst}`     : `${a*c}x${coefConst}`   // 2ac→ac
-  const fin_w3 = `${coefX}x`   // 定数項落とし
+  const dfStr = highLeft ? diffPolyStr(aH, n) : diffPolyStr(c, 1)  // D(f)
+  const dgStr = highLeft ? diffPolyStr(c, 1)  : diffPolyStr(aH, n) // D(g)
 
-  return {
-    fStr, gStr, df, dg, finalStr,
-    question: `D\\{(${fStr})(${gStr})\\}`,
-    q1: { question: `D(${fStr})=?`,  correct: df,       choices: shuffleArray([df,df_w1,df_w2,df_w3]) },
-    q2: { question: `D(${gStr})=?`,  correct: dg,       choices: shuffleArray([dg,dg_w1,dg_w2,dg_w3]) },
-    q3: {
-      question: `D(${fStr}) \\cdot (${gStr}) + (${fStr}) \\cdot D(${gStr})=?`,
-      correct: finalStr,
-      choices: shuffleArray([finalStr, fin_w1, fin_w2, fin_w3]),
-    },
-  }
-}
+  // 穴埋め：左右ランダム
+  const askLeft = randomInt(0, 1) === 0
+  const correct = askLeft ? dfStr : dgStr
 
-// ── 後半問題生成：f=ax^n±b, g=cx^m±d ──────────────────
-const generateBack = () => {
-  // パターンをランダムに選ぶ
-  const pattern = randomInt(0, 2)
+  // 公式展開行
+  const formulaLine = `${applyNotation(notation, fStr)} \\cdot (${gStr}) + (${fStr}) \\cdot ${applyNotation(notation, gStr)}`
 
-  let a, n, b, c, m, d
+  // 穴埋め行
+  const blankLine = askLeft
+    ? `\\square \\cdot (${gStr}) + (${fStr}) \\cdot ${applyNotation(notation, gStr)}`
+    : `${applyNotation(notation, fStr)} \\cdot (${gStr}) + (${fStr}) \\cdot \\square`
 
-  if (pattern === 0) {
-    // (ax^n ± b)(cx ± d)
-    n = randomInt(2, 3); m = 1
-    a = randomInt(1, 3) * (randomInt(0,1) === 0 ? 1 : -1)
-    b = randomInt(1, 5) * (randomInt(0,1) === 0 ? 1 : -1)
-    c = randomInt(1, 4)
-    d = randomInt(1, 8) * (randomInt(0,1) === 0 ? 1 : -1)
-  } else if (pattern === 1) {
-    // (ax ± b)(cx^m ± d)
-    n = 1; m = randomInt(2, 3)
-    a = randomInt(1, 4)
-    b = randomInt(1, 8) * (randomInt(0,1) === 0 ? 1 : -1)
-    c = randomInt(1, 3) * (randomInt(0,1) === 0 ? 1 : -1)
-    d = randomInt(1, 5) * (randomInt(0,1) === 0 ? 1 : -1)
-  } else {
-    // (ax^n ± b)(cx^m ± d) 両方高次
-    n = randomInt(2, 3); m = randomInt(2, 3)
-    a = randomInt(1, 3) * (randomInt(0,1) === 0 ? 1 : -1)
-    b = randomInt(1, 5) * (randomInt(0,1) === 0 ? 1 : -1)
-    c = randomInt(1, 3) * (randomInt(0,1) === 0 ? 1 : -1)
-    d = randomInt(1, 5) * (randomInt(0,1) === 0 ? 1 : -1)
+  // 不正解選択肢
+  const makeWrongs = (correct, a, n) => {
+    if (n === 1) {
+      // D(ax+b)=a の間違いパターン
+      return [`${a}x`, `${a+1}`, `0`]
+    } else {
+      // D(ax^n+b)=an·x^{n-1} の間違いパターン
+      const coef = a * n
+      return [
+        `${coef}x^{${n}}`,       // 指数-1忘れ
+        `x^{${n-1}}`,            // 係数忘れ
+        `${coef+1}x^{${n-1}}`,  // 係数ミス
+      ]
+    }
   }
 
-  const fStr = polyStr(a, n, b)
-  const gStr = polyStr(c, m, d)
-
-  const df = diffPoly(a, n)   // D(ax^n+b) = an·x^{n-1}
-  const dg = diffPoly(c, m)   // D(cx^m+d) = cm·x^{m-1}
-
-  // 最終答：df·g + f·dg（展開・同類項まとめ）
-  // df = an·x^{n-1}, f = ax^n+b, dg = cm·x^{m-1}, g = cx^m+d
-  const an = a * n
-  const cm = c * m
-  // df·g = an·x^{n-1}·(cx^m+d) = an·c·x^{n+m-1} + an·d·x^{n-1}
-  // f·dg = (ax^n+b)·cm·x^{m-1} = a·cm·x^{n+m-1} + b·cm·x^{m-1}
-  // 同次の項：x^{n+m-1} の係数 = an·c + a·cm = ac(n+m)
-  const topExp  = n + m - 1
-  const topCoef = an * c + a * cm   // = a*c*(n+m)
-
-  // x^{n-1} の係数 = an·d（ただし n>1 のとき）
-  // x^{m-1} の係数 = b·cm（ただし m>1 のとき）
-  // n=1のとき x^0=定数になるため別処理
-
-  // 各項を配列で管理してまとめる
-  const terms = {}  // exp -> coef
-  const addTerm = (exp, coef) => { terms[exp] = (terms[exp] || 0) + coef }
-
-  addTerm(topExp, topCoef)
-  if (n - 1 >= 0) addTerm(n - 1, an * d)
-  if (m - 1 >= 0) addTerm(m - 1, b * cm)
-
-  // 降冪で文字列化
-  const exps = Object.keys(terms).map(Number).sort((a, b) => b - a)
-  const finalStr = exps.map((exp, i) => {
-    const coef = terms[exp]
-    if (coef === 0) return ''
-    const xp = exp === 0 ? '' : exp === 1 ? 'x' : `x^{${exp}}`
-    const absCoef = Math.abs(coef)
-    const head = exp === 0 ? `${coef}` : coef === 1 ? xp : coef === -1 ? `-${xp}` : `${coef}${xp}`
-    if (i === 0) return head
-    return coef > 0 ? `+${absCoef === 1 && xp ? xp : absCoef + xp}` : `-${absCoef === 1 && xp ? xp : absCoef + xp}`
-  }).filter(Boolean).join('')
-
-  // 問1選択肢
-  const df_w1 = diffPoly(a, n + 1)    // 指数ミス
-  const df_w2 = n === 1 ? `${a+1}` : `${a}x^{${n-1}}`  // 係数ミス
-  const df_w3 = `${a}`                  // 微分しない
-
-  // 問2選択肢
-  const dg_w1 = diffPoly(c, m + 1)
-  const dg_w2 = m === 1 ? `${c+1}` : `${c}x^{${m-1}}`
-  const dg_w3 = `${c}`
-
-  // 問3選択肢（係数を少しずらす）
-  const tweakStr = (s) => s.replace(/^(-?\d+)/, (_, n) => `${parseInt(n) + 1}`)
-  const fin_w1 = tweakStr(finalStr)
-  const fin_w2 = finalStr.replace(/\+/g, '-').replace(/--/g, '+')  // 符号ミス
-  const fin_w3 = (() => {
-    // topCoef だけ変える
-    const alt = { ...terms }
-    alt[topExp] = topCoef - a * cm   // f·dg部分だけ
-    return Object.keys(alt).map(Number).sort((a,b)=>b-a).map((exp,i)=>{
-      const coef = alt[exp]; if(!coef) return ''
-      const xp = exp===0?'':exp===1?'x':`x^{${exp}}`
-      const head = exp===0?`${coef}`:coef===1?xp:coef===-1?`-${xp}`:`${coef}${xp}`
-      if(i===0) return head
-      const abs = Math.abs(coef)
-      return coef>0?`+${abs===1&&xp?xp:abs+xp}`:`-${abs===1&&xp?xp:abs+xp}`
-    }).filter(Boolean).join('')
-  })()
+  const wrongs = askLeft
+    ? makeWrongs(correct, highLeft ? aH : c, highLeft ? n : 1)
+    : makeWrongs(correct, highLeft ? c : aH, highLeft ? 1 : n)
 
   return {
-    fStr, gStr, df, dg, finalStr,
-    question: `D\\{(${fStr})(${gStr})\\}`,
-    q1: { question: `D(${fStr})=?`,  correct: df, choices: shuffleArray([df,df_w1,df_w2,df_w3]) },
-    q2: { question: `D(${gStr})=?`,  correct: dg, choices: shuffleArray([dg,dg_w1,dg_w2,dg_w3]) },
-    q3: {
-      question: `D(${fStr}) \\cdot (${gStr}) + (${fStr}) \\cdot D(${gStr})=?`,
-      correct: finalStr,
-      choices: shuffleArray([finalStr, fin_w1, fin_w2, fin_w3]),
-    },
+    notation,
+    fStr, gStr, dfStr, dgStr,
+    askLeft, correct,
+    formulaLine, blankLine,
+    blankQuestion: `\\square = ?`,
+    question: applyNotationOuter(notation, `(${fStr})(${gStr})`),
+    choices: shuffleArray([correct, ...wrongs]),
   }
 }
 
 // ── メインコンポーネント ─────────────────────────────────
 export default function Step7() {
-  const navigate  = useNavigate()
-  const [stage, setStage]     = useState('front')          // 'front' | 'back'
-  const [problem, setProblem] = useState(generateFront())
-  const [phase, setPhase]     = useState(1)                // 1,2,3
-  const [answers, setAnswers] = useState({})
-  const [message, setMessage] = useState('')
-  const [prepNum, setPrepNum] = useState(null)
-  const [frontCount, setFrontCount] = useState(0)          // 前半正解数カウント
-  const FRONT_REQUIRED = 3                                  // 前半この数クリアで後半へ
-
-  const currentQ = phase === 1 ? problem.q1 : phase === 2 ? problem.q2 : problem.q3
-  const selected = answers[phase]
+  const navigate = useNavigate()
+  const [problem, setProblem]           = useState(generateProblem())
+  const [selectedAnswer, setSelectedAnswer] = useState(null)
+  const [message, setMessage]           = useState('')
+  const [prepNum, setPrepNum]           = useState(null)
 
   const checkAnswer = (answer) => {
-    if (selected !== undefined) return
-    setAnswers(prev => ({ ...prev, [phase]: answer }))
-    setMessage(answer === currentQ.correct ? '⭕' : '❌')
+    if (selectedAnswer !== null) return
+    setSelectedAnswer(answer)
+    setMessage(answer === problem.correct ? '⭕' : '❌')
   }
-
-  const nextPhase = () => { setPhase(phase + 1); setMessage('') }
 
   const nextProblem = () => {
-    // 問3正解かどうか確認
-    const q3correct = answers[3] === problem.q3.correct || selected === problem.q3.correct
-
-    if (stage === 'front') {
-      const newCount = q3correct ? frontCount + 1 : frontCount
-      if (newCount >= FRONT_REQUIRED) {
-        // 後半へ移行
-        setStage('back')
-        setProblem(generateBack())
-        setFrontCount(0)
-      } else {
-        setFrontCount(newCount)
-        setProblem(generateFront())
-      }
-    } else {
-      setProblem(generateBack())
-    }
-    setPhase(1); setAnswers({}); setMessage('')
+    setSelectedAnswer(null)
+    setMessage('')
+    setProblem(generateProblem())
   }
 
-  // 例示エリア（前半・後半で切り替え）
-  const ExamplesArea = () => stage === 'front' ? (
-    <div style={{
-      background: '#1a1a2e', border: '1px solid #444',
-      borderRadius: '12px', padding: '16px 24px', marginBottom: '24px',
-    }}>
-      <BlockMath math={String.raw`\boxed{\times = \cdot}`} />
-      <BlockMath math={String.raw`D\{f \cdot g\} = D(f) \cdot g + f \cdot D(g)`} />
-      <BlockMath math={String.raw`\,`} />
-
-      {/* 例1: (2x+1)(3x-4) */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
-        <div style={{ flex: 1, minWidth: '280px' }}>
-          <BlockMath math={String.raw`\begin{aligned}
-            D\{(2x+1)(3x-4)\}
-              &= D(2x+1)(3x-4)+(2x+1)D(3x-4) \\
-              &= 2(3x-4)+(2x+1) \cdot 3 \\
-              &= 6x-8+6x+3 \\
-              &= 12x-5
-          \end{aligned}`} />
-        </div>
-        <div style={{ paddingTop: '60px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <PrepBadge num={2} onClick={() => setPrepNum(2)} />
-          <PrepBadge num={3} onClick={() => setPrepNum(3)} />
-        </div>
-      </div>
-
-      <BlockMath math={String.raw`\,`} />
-
-      {/* 例2: (4x-8)(2x+5) */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
-        <div style={{ flex: 1, minWidth: '280px' }}>
-          <BlockMath math={String.raw`\begin{aligned}
-            D\{(4x-8)(2x+5)\}
-              &= D(4x-8)(2x+5)+(4x-8)D(2x+5) \\
-              &= 4(2x+5)+(4x-8) \cdot 2 \\
-              &= 8x+20+8x-16 \\
-              &= 16x+4
-          \end{aligned}`} />
-        </div>
-        <div style={{ paddingTop: '60px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <PrepBadge num={2} onClick={() => setPrepNum(2)} />
-          <PrepBadge num={3} onClick={() => setPrepNum(3)} />
-        </div>
-      </div>
-    </div>
-  ) : (
-    <div style={{
-      background: '#1a1a2e', border: '1px solid #444',
-      borderRadius: '12px', padding: '16px 24px', marginBottom: '24px',
-    }}>
-      <BlockMath math={String.raw`D\{f \cdot g\} = D(f) \cdot g + f \cdot D(g)`} />
-      <BlockMath math={String.raw`\,`} />
-
-      {/* 例1: (x^2-1)(3x+2) */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
-        <div style={{ flex: 1, minWidth: '280px' }}>
-          <BlockMath math={String.raw`\begin{aligned}
-            D\{(x^2-1)(3x+2)\}
-              &= D(x^2-1)(3x+2)+(x^2-1)D(3x+2) \\
-              &= 2x(3x+2)+(x^2-1) \cdot 3 \\
-              &= 6x^2+4x+3x^2-3 \\
-              &= 9x^2+4x-3
-          \end{aligned}`} />
-        </div>
-        <div style={{ paddingTop: '60px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <PrepBadge num={2} onClick={() => setPrepNum(2)} />
-          <PrepBadge num={3} onClick={() => setPrepNum(3)} />
-        </div>
-      </div>
-
-      <BlockMath math={String.raw`\,`} />
-
-      {/* 例2: (x+2)(2x^2-5) */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', flexWrap: 'wrap', gap: '6px' }}>
-        <div style={{ flex: 1, minWidth: '280px' }}>
-          <BlockMath math={String.raw`\begin{aligned}
-            D\{(x+2)(2x^2-5)\}
-              &= D(x+2)(2x^2-5)+(x+2)D(2x^2-5) \\
-              &= 1 \cdot (2x^2-5)+(x+2) \cdot 4x \\
-              &= 2x^2-5+4x^2+8x \\
-              &= 6x^2+8x-5
-          \end{aligned}`} />
-        </div>
-        <div style={{ paddingTop: '60px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <PrepBadge num={2} onClick={() => setPrepNum(2)} />
-          <PrepBadge num={3} onClick={() => setPrepNum(3)} />
-        </div>
-      </div>
-    </div>
-  )
-
-  const btnStyle = (choice) => ({
-    padding: '12px 20px', fontSize: '20px', borderRadius: '10px',
-    border: '2px solid #555', cursor: 'pointer',
-    backgroundColor:
-      selected === choice
-        ? choice === currentQ.correct ? '#2d6a2d' : '#6a2d2d'
-        : '#2a2a3e',
-    color: 'white', minWidth: '80px', textAlign: 'center',
-  })
+  // 例示：記号3種それぞれ1つ
+  const examples = [
+    // D( ) 記号
+    {
+      formula: String.raw`\begin{aligned}
+        D\{(x^2-1)(3x+2)\}
+          &= D(x^2-1) \cdot (3x+2) + (x^2-1) \cdot D(3x+2) \\
+          &= 2x(3x+2) + (x^2-1) \cdot 3
+      \end{aligned}`,
+    },
+    // ( )' 記号
+    {
+      formula: String.raw`\begin{aligned}
+        \{(x+2)(2x^2-5)\}'
+          &= (x+2)' \cdot (2x^2-5) + (x+2) \cdot (2x^2-5)' \\
+          &= 1 \cdot (2x^2-5) + (x+2) \cdot 4x
+      \end{aligned}`,
+    },
+    // d/dx( ) 記号
+    {
+      formula: String.raw`\begin{aligned}
+        \dfrac{d}{dx}\{(x^3+1)(2x-3)\}
+          &= \dfrac{d}{dx}(x^3+1) \cdot (2x-3) + (x^3+1) \cdot \dfrac{d}{dx}(2x-3) \\
+          &= 3x^2(2x-3) + (x^3+1) \cdot 2
+      \end{aligned}`,
+    },
+  ]
 
   return (
     <div style={{ padding: '20px', maxWidth: '700px', margin: '0 auto', fontFamily: 'sans-serif' }}>
       <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>Math Puzzle – Step 7</h1>
 
-      {/* 前半/後半インジケーター */}
-      <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-        <span style={{
-          padding: '4px 16px', borderRadius: '20px', fontSize: '14px', fontWeight: 'bold',
-          backgroundColor: stage === 'front' ? '#1a6ef5' : '#2d6a2d',
-          color: 'white',
-        }}>
-          {stage === 'front' ? `Phase 1　${frontCount} / ${FRONT_REQUIRED}` : 'Phase 2'}
-        </span>
+      {/* 例示エリア */}
+      <div style={{
+        background: '#1a1a2e', border: '1px solid #444',
+        borderRadius: '12px', padding: '16px 24px', marginBottom: '24px',
+      }}>
+        <BlockMath math={String.raw`\boxed{\times = \cdot}`} />
+        <BlockMath math={String.raw`D\{f \cdot g\} = D(f) \cdot g + f \cdot D(g)`} />
+        <BlockMath math={String.raw`\,`} />
+
+        {examples.map((ex, i) => (
+          <div key={i}>
+            {/* 計算式 */}
+            <BlockMath math={ex.formula} />
+            {/* バッジを式の下に横並び */}
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px', marginBottom: '4px' }}>
+              <PrepBadge num={2} onClick={() => setPrepNum(2)} />
+              <PrepBadge num={3} onClick={() => setPrepNum(3)} />
+            </div>
+            {i < examples.length - 1 && <BlockMath math={String.raw`\,`} />}
+          </div>
+        ))}
       </div>
 
-      {/* 例示エリア */}
-      <ExamplesArea />
-
-      {/* 問題タイトル */}
+      {/* 問題エリア */}
       <div style={{
         background: '#0d2137', border: '2px solid #4db8ff',
-        borderRadius: '12px', padding: '16px 24px', marginBottom: '16px',
+        borderRadius: '12px', padding: '16px 24px', marginBottom: '12px',
       }}>
-        <BlockMath math={problem.question} />
-        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-          {[1,2,3].map(i => (
-            <div key={i} style={{
-              width: '32px', height: '8px', borderRadius: '4px',
-              backgroundColor: i <= phase ? '#4db8ff' : '#333',
-            }} />
-          ))}
+        <BlockMath math={
+          `\\begin{aligned}
+            ${problem.question} &= ${problem.formulaLine} \\\\
+            &= ${problem.blankLine}
+          \\end{aligned}`
+        } />
+        <div style={{ textAlign: 'center', color: '#4db8ff', fontWeight: 'bold' }}>
+          <BlockMath math={problem.blankQuestion} />
         </div>
-      </div>
-
-      {/* 現在の問い */}
-      <div style={{
-        background: '#1a2a1a', border: '2px solid #4dff88',
-        borderRadius: '12px', padding: '16px 24px', marginBottom: '16px',
-      }}>
-        {phase >= 2 && (
-          <div style={{ color: '#aaa', marginBottom: '8px' }}>
-            <BlockMath math={`D(${problem.fStr}) = ${problem.df}`} />
-          </div>
-        )}
-        {phase >= 3 && (
-          <div style={{ color: '#aaa', marginBottom: '8px' }}>
-            <BlockMath math={`D(${problem.gStr}) = ${problem.dg}`} />
-          </div>
-        )}
-        <BlockMath math={currentQ.question} />
       </div>
 
       {/* 選択肢 */}
       <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
-        {currentQ.choices.map((choice) => (
-          <button key={choice} onClick={() => checkAnswer(choice)} style={btnStyle(choice)}>
+        {problem.choices.map((choice) => (
+          <button
+            key={choice}
+            onClick={() => checkAnswer(choice)}
+            style={{
+              padding: '12px 20px', fontSize: '22px', borderRadius: '10px',
+              border: '2px solid #555', cursor: 'pointer',
+              backgroundColor:
+                selectedAnswer === choice
+                  ? choice === problem.correct ? '#2d6a2d' : '#6a2d2d'
+                  : '#2a2a3e',
+              color: 'white', minWidth: '80px', textAlign: 'center',
+            }}
+          >
             <BlockMath math={choice} />
           </button>
         ))}
@@ -461,24 +269,13 @@ export default function Step7() {
 
       {/* ボタン */}
       <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-        {selected !== undefined && phase < 3 && (
-          <button onClick={nextPhase} style={{
-            padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
-            border: 'none', backgroundColor: '#1a6ef5', color: 'white',
-            cursor: 'pointer', fontWeight: 'bold',
-          }}>
-            Next →
-          </button>
-        )}
-        {selected !== undefined && phase === 3 && (
-          <button onClick={nextProblem} style={{
-            padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
-            border: 'none', backgroundColor: '#1a6ef5', color: 'white',
-            cursor: 'pointer', fontWeight: 'bold',
-          }}>
-            Next
-          </button>
-        )}
+        <button onClick={nextProblem} style={{
+          padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
+          border: 'none', backgroundColor: '#1a6ef5', color: 'white',
+          cursor: 'pointer', fontWeight: 'bold',
+        }}>
+          Next
+        </button>
         <button onClick={() => navigate('/')} style={{
           padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
           border: '1px solid #555', backgroundColor: 'transparent',

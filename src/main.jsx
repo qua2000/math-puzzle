@@ -10,7 +10,6 @@ import Step4 from './Step4.jsx'
 import Step5 from './Step5.jsx'
 import Step6 from './Step6.jsx'
 import Step7 from './Step7.jsx'
-import Step8 from './Step8.jsx'
 import WarmUp1 from './WarmUp1.jsx'   // ← 追加6-4-26
 import WarmUp2 from './WarmUp2.jsx'   // ← 追加6-7-26
 import WarmUp3 from './WarmUp3.jsx'   // ← 追加6-12-26
@@ -30,7 +29,6 @@ createRoot(document.getElementById('root')).render(
         <Route path="/step5" element={<Step5 />} />
         <Route path="/step6" element={<Step6 />} />
         <Route path="/step7" element={<Step7 />} />
-        <Route path="/step8" element={<Step8 />} />
         <Route path="/warmup1" element={<WarmUp1 />} />  // ← 追加6-4-26
         <Route path="/warmup2" element={<WarmUp2 />} />  // ← 追加6-7-26
         <Route path="/warmup3" element={<WarmUp3 />} />  // ← 追加6-12-26
