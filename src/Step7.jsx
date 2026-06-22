@@ -8,26 +8,132 @@ const BlockMath = ({ math }) => {
   return <div dangerouslySetInnerHTML={{ __html: html }} />
 }
 
+const InlineMath = ({ math }) => {
+  const html = katex.renderToString(math, { throwOnError: false, displayMode: false })
+  return <span dangerouslySetInnerHTML={{ __html: html }} />
+}
+
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min
-const shuffleArray = (array) => [...array].sort(() => Math.random() - 0.5)
+
+function normalize(s) { return String(s).replace(/\s/g, '').toLowerCase() }
+
+function toKatex(str) {
+  if (!str) return ''
+  return str.replace(/\^(-?\d+)/g, (_, exp) => `^{${exp}}`)
+}
+
+// ── 多項式ヘルパー ──────────────────────────────────────
+function addTermTo(terms, exp, coef) {
+  terms[exp] = (terms[exp] || 0) + coef
+}
+
+function formatTermsObj(terms) {
+  const exps = Object.keys(terms).map(Number).filter(e => terms[e] !== 0).sort((a, b) => b - a)
+  if (exps.length === 0) return '0'
+  return exps.map((exp, i) => {
+    const coef = terms[exp]
+    const absC = Math.abs(coef)
+    const xp = exp === 0 ? '' : exp === 1 ? 'x' : `x^{${exp}}`
+    let body
+    if (exp === 0) body = `${absC}`
+    else if (absC === 1) body = xp
+    else body = `${absC}${xp}`
+    if (i === 0) return coef < 0 ? `-${body}` : body
+    return coef < 0 ? `-${body}` : `+${body}`
+  }).join('')
+}
+
+function formatMonomial(coef, exp) {
+  const xp = exp === 0 ? '' : exp === 1 ? 'x' : `x^{${exp}}`
+  if (exp === 0) return `${coef}`
+  if (coef === 1) return xp
+  if (coef === -1) return `-${xp}`
+  return `${coef}${xp}`
+}
+
+// 2項多項式 ax^n + b の KaTeX 文字列
+function poly2Katex(a, n, b) {
+  const xp = n === 1 ? 'x' : `x^{${n}}`
+  const head = a === 1 ? xp : a === -1 ? `-${xp}` : `${a}${xp}`
+  if (b === 0) return head
+  return b > 0 ? `${head}+${b}` : `${head}${b}`
+}
+
+// 3項多項式 ax^n + bx^m + c の KaTeX 文字列（n > m > 0 想定）
+function poly3Katex(a, n, b, m, c) {
+  const parts = []
+  const xpN = n === 1 ? 'x' : `x^{${n}}`
+  if (a === 1) parts.push(xpN)
+  else if (a === -1) parts.push(`-${xpN}`)
+  else parts.push(`${a}${xpN}`)
+  const xpM = m === 1 ? 'x' : `x^{${m}}`
+  if (b > 0) parts.push(`+${b === 1 ? xpM : `${b}${xpM}`}`)
+  else if (b < 0) parts.push(`${b === -1 ? `-${xpM}` : `${b}${xpM}`}`)
+  if (c > 0) parts.push(`+${c}`)
+  else if (c < 0) parts.push(`${c}`)
+  return parts.join('')
+}
+
+// ── 柔軟な正解判定 ──────────────────────────────────────
+function parseTerms(str) {
+  const s = String(str).replace(/\s/g, '')
+  if (!s) return null
+  const withSign = (s[0] === '+' || s[0] === '-') ? s : '+' + s
+  const tokens = withSign.match(/[+-][^+-]+/g)
+  if (!tokens) return null
+  const terms = {}
+  for (const tok of tokens) {
+    const sign = tok[0] === '-' ? -1 : 1
+    const body = tok.slice(1)
+    if (!body) return null
+    if (body.includes('x')) {
+      const idx = body.indexOf('x')
+      const coefPart = body.slice(0, idx)
+      const expPart  = body.slice(idx + 1)
+      const coef = coefPart === '' ? 1 : Number(coefPart)
+      if (Number.isNaN(coef)) return null
+      let exp = 1
+      if (expPart.startsWith('^')) {
+        let expNum = expPart.slice(1)
+        if (expNum.startsWith('{') && expNum.endsWith('}')) expNum = expNum.slice(1, -1)
+        exp = Number(expNum)
+        if (Number.isNaN(exp)) return null
+      } else if (expPart !== '') return null
+      terms[exp] = (terms[exp] || 0) + sign * coef
+    } else {
+      const coef = Number(body)
+      if (Number.isNaN(coef)) return null
+      terms[0] = (terms[0] || 0) + sign * coef
+    }
+  }
+  Object.keys(terms).forEach(k => { if (terms[k] === 0) delete terms[k] })
+  return terms
+}
+
+function checkAnswer(userStr, correctStr) {
+  if (!userStr) return false
+  if (normalize(userStr) === normalize(correctStr)) return true
+  const t1 = parseTerms(userStr)
+  const t2 = parseTerms(correctStr)
+  if (!t1 || !t2) return false
+  const k1 = Object.keys(t1), k2 = Object.keys(t2)
+  if (k1.length !== k2.length) return false
+  return k1.every(k => t1[k] === t2[k])
+}
 
 // ── Prepバッジ ──────────────────────────────────────────
 const PrepBadge = ({ num, onClick }) => (
-  <button
-    onClick={onClick}
-    style={{
-      display: 'inline-flex', alignItems: 'center', gap: '4px',
-      padding: '3px 10px', fontSize: '13px', fontWeight: 'bold',
-      borderRadius: '20px', border: '1.5px solid #f0a500',
-      backgroundColor: 'rgba(240,165,0,0.15)', color: '#f0a500',
-      cursor: 'pointer', verticalAlign: 'middle', marginLeft: '8px', lineHeight: 1.2,
-    }}
-  >
+  <button onClick={onClick} style={{
+    display: 'inline-flex', alignItems: 'center', gap: '4px',
+    padding: '3px 10px', fontSize: '13px', fontWeight: 'bold',
+    borderRadius: '20px', border: '1.5px solid #f0a500',
+    backgroundColor: 'rgba(240,165,0,0.15)', color: '#f0a500',
+    cursor: 'pointer', verticalAlign: 'middle', marginLeft: '8px', lineHeight: 1.2,
+  }}>
     📘 Prep{num}
   </button>
 )
 
-// ── 準備中ポップアップ ───────────────────────────────────
 const PrepPopup = ({ num, onClose }) => (
   <div onClick={onClose} style={{
     position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)',
@@ -37,9 +143,8 @@ const PrepPopup = ({ num, onClose }) => (
       background: '#1a1a2e', border: '2px solid #f0a500',
       borderRadius: '16px', padding: '32px 40px', textAlign: 'center', minWidth: '220px',
     }}>
-      <div style={{ fontSize: '40px', marginBottom: '12px' }}>🚧</div>
+      <div style={{ fontSize: '40px', marginBottom: '12px' }}>📘</div>
       <div style={{ fontSize: '22px', fontWeight: 'bold', color: '#f0a500' }}>Prep {num}</div>
-      <div style={{ fontSize: '28px', marginTop: '8px' }}>Coming Soon</div>
       <button onClick={onClose} style={{
         marginTop: '24px', padding: '10px 28px', fontSize: '16px',
         borderRadius: '10px', border: 'none', backgroundColor: '#f0a500',
@@ -49,246 +154,477 @@ const PrepPopup = ({ num, onClose }) => (
   </div>
 )
 
-// ── 記号3種 ─────────────────────────────────────────────
-// notationType: 0=D(), 1=()', 2=d/dx()
-const notations = [0, 1, 2]
+const CaretGuide = () => (
+  <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '8px' }}>
+    <div style={{
+      background: '#1a2a3e', border: '1px solid #4db8ff44',
+      borderRadius: '8px', padding: '4px 12px',
+      display: 'flex', alignItems: 'center', gap: '6px',
+    }}>
+      <span style={{ color: '#4db8ff', fontSize: '15px', fontFamily: 'monospace' }}>x^2</span>
+      <span style={{ color: '#888', fontSize: '13px' }}>→</span>
+      <span style={{ color: '#aaffaa', fontSize: '15px' }}>x<sup style={{ fontSize: '11px' }}>2</sup></span>
+    </div>
+  </div>
+)
 
-const applyNotation = (type, expr) => {
-  if (type === 0) return `D(${expr})`
-  if (type === 1) return `(${expr})'`
-  return `\\dfrac{d}{dx}(${expr})`
+const NumKeyboard = ({ onKey, onDelete, onEnter }) => {
+  const rowStyle = { display: 'flex', gap: '6px', justifyContent: 'center', marginBottom: '6px' }
+  const btnStyle = (color) => ({
+    padding: '12px 4px', minWidth: '46px', flex: 1, maxWidth: '60px',
+    borderRadius: '8px',
+    border: `1.5px solid ${color === 'del' ? '#ff666655' : color === 'enter' ? '#44ff8855' : color === 'caret' ? '#aaffaa55' : '#4db8ff55'}`,
+    background: color === 'del' ? '#3a1a1a' : color === 'enter' ? '#1a4a1a' : color === 'caret' ? '#1a3a1a' : '#1a2a3e',
+    color: color === 'del' ? '#ff9999' : color === 'enter' ? '#88ff88' : color === 'caret' ? '#aaffaa' : 'white',
+    fontSize: '16px', fontWeight: 'bold', cursor: 'pointer',
+  })
+  return (
+    <div style={{ marginTop: '8px' }}>
+      <div style={rowStyle}>
+        {['1','2','3','4','5','6','7','8','9','0'].map(n => (
+          <button key={n} style={btnStyle('num')} onClick={() => onKey(n)}>{n}</button>
+        ))}
+      </div>
+      <div style={rowStyle}>
+        <button style={btnStyle('num')} onClick={() => onKey('x')}>x</button>
+        <button style={btnStyle('caret')} onClick={() => onKey('^')}>^</button>
+        <button style={btnStyle('num')} onClick={() => onKey('+')}>+</button>
+        <button style={btnStyle('num')} onClick={() => onKey('-')}>-</button>
+      </div>
+      <div style={rowStyle}>
+        <button style={{ ...btnStyle('del'), flex: 1, maxWidth: '90px' }} onClick={onDelete}>⌫</button>
+        <button style={{ ...btnStyle('enter'), flex: 2, maxWidth: '170px' }} onClick={onEnter}>✓</button>
+      </div>
+    </div>
+  )
 }
 
-const applyNotationOuter = (type, expr) => {
-  if (type === 0) return `D\\{${expr}\\}`
-  if (type === 1) return `\\{${expr}\\}'`
-  return `\\dfrac{d}{dx}\\{${expr}\\}`
+// 穴埋め用ボックス
+const BlankBox = ({ value, status, active, onClick }) => (
+  <span onClick={onClick} style={{
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    minWidth: '60px', padding: '3px 10px', margin: '0 2px',
+    borderRadius: '6px', cursor: status === 'correct' ? 'default' : 'pointer',
+    border: `2px solid ${status === 'correct' ? '#4dff88' : status === 'wrong' ? '#ff6666' : active ? '#4db8ff' : '#555'}`,
+    background: '#163a5e',
+    color: status === 'correct' ? '#aaffaa' : status === 'wrong' ? '#ff9999' : '#4db8ff',
+    fontFamily: 'monospace', fontWeight: 'bold', fontSize: '16px', verticalAlign: 'middle',
+  }}>
+    {value || '□'}
+  </span>
+)
+
+// 単一回答ボックス
+const singleBoxStyle = (wrong) => ({
+  background: '#163a5e',
+  border: `2px solid ${wrong ? '#ff6666' : '#4db8ff'}`,
+  borderRadius: '6px', minWidth: '140px', padding: '4px 12px',
+  textAlign: 'center', color: wrong ? '#ff9999' : '#4db8ff',
+  fontWeight: 'bold', fontSize: '18px', fontFamily: 'monospace',
+})
+
+// ── 問題生成（2項×2項） ──────────────────────────────────
+function buildProblem2x2(a, n, b, c, m, d) {
+  const fStr = poly2Katex(a, n, b)
+  const gStr = poly2Katex(c, m, d)
+  const dfCoef = a * n, dfExp = n - 1
+  const dgCoef = c * m, dgExp = m - 1
+  const dfStr = formatMonomial(dfCoef, dfExp)
+  const dgStr = formatMonomial(dgCoef, dgExp)
+
+  const term1 = {}
+  addTermTo(term1, dfExp + m, dfCoef * c)
+  if (d !== 0) addTermTo(term1, dfExp, dfCoef * d)
+  const term1Str = formatTermsObj(term1)
+
+  const term2 = {}
+  addTermTo(term2, n + dgExp, a * dgCoef)
+  if (b !== 0) addTermTo(term2, dgExp, b * dgCoef)
+  const term2Str = formatTermsObj(term2)
+
+  const finalTerms = {}
+  Object.keys(term1).forEach(k => addTermTo(finalTerms, Number(k), term1[Number(k)]))
+  Object.keys(term2).forEach(k => addTermTo(finalTerms, Number(k), term2[Number(k)]))
+  const finalStr = formatTermsObj(finalTerms)
+
+  return { fStr, gStr, dfStr, dgStr, term1Str, term2Str, finalStr,
+    q: `D\\{(${fStr})(${gStr})\\}` }
 }
 
-// ── 多項式文字列ヘルパー ─────────────────────────────────
-// ax^n ± b の文字列
-const polyStr = (a, n, b) => {
-  const xPart = n === 1 ? 'x' : `x^{${n}}`
-  const head  = a === 1 ? xPart : a === -1 ? `-${xPart}` : `${a}${xPart}`
-  const bAbs  = Math.abs(b)
-  const tail  = b === 0 ? '' : b > 0 ? `+${b}` : `-${bAbs}`
-  return head + tail
+// ── 問題生成（2項×3項） ──────────────────────────────────
+function buildProblem2x3(a, n, b, c, p, d, q, e) {
+  const fStr = poly2Katex(a, n, b)
+  const gStr = poly3Katex(c, p, d, q, e)
+
+  const dfCoef = a * n, dfExp = n - 1
+  const dfStr = formatMonomial(dfCoef, dfExp)
+
+  const dgCoef1 = c * p, dgExp1 = p - 1
+  const dgCoef2 = d * q, dgExp2 = q - 1
+  const dgTerms = {}
+  if (dgCoef1 !== 0) addTermTo(dgTerms, dgExp1, dgCoef1)
+  if (dgCoef2 !== 0) addTermTo(dgTerms, dgExp2, dgCoef2)
+  const dgStr = formatTermsObj(dgTerms)
+
+  const term1 = {}
+  addTermTo(term1, dfExp + p, dfCoef * c)
+  if (d !== 0) addTermTo(term1, dfExp + q, dfCoef * d)
+  if (e !== 0) addTermTo(term1, dfExp,     dfCoef * e)
+  const term1Str = formatTermsObj(term1)
+
+  const term2 = {}
+  addTermTo(term2, n + dgExp1, a * dgCoef1)
+  addTermTo(term2, n + dgExp2, a * dgCoef2)
+  if (b !== 0 && dgCoef1 !== 0) addTermTo(term2, dgExp1, b * dgCoef1)
+  if (b !== 0 && dgCoef2 !== 0) addTermTo(term2, dgExp2, b * dgCoef2)
+  const term2Str = formatTermsObj(term2)
+
+  const finalTerms = {}
+  Object.keys(term1).forEach(k => addTermTo(finalTerms, Number(k), term1[Number(k)]))
+  Object.keys(term2).forEach(k => addTermTo(finalTerms, Number(k), term2[Number(k)]))
+  const finalStr = formatTermsObj(finalTerms)
+
+  return { fStr, gStr, dfStr, dgStr, term1Str, term2Str, finalStr,
+    q: `D\\{(${fStr})(${gStr})\\}` }
 }
 
-// D(ax^n ± b) = an·x^{n-1}
-const diffPolyStr = (a, n) => {
-  const coef = a * n
-  if (n === 1) return `${coef}`
-  if (n === 2) return `${coef}x`
-  return `${coef}x^{${n-1}}`
-}
+// ── 問題生成（高次のみ・6パターンをランダム） ───────────────
+function generateProblem() {
+  const pat = randomInt(0, 5)
+  let a, n, b, c, m, d
 
-// ── 問題生成 ────────────────────────────────────────────
-const generateProblem = () => {
-  // 記号をランダムに選ぶ
-  const notation = notations[randomInt(0, 2)]
-
-  // どちらを高次にするかランダム
-  const highLeft = randomInt(0, 1) === 0
-
-  // 高次側: ax^n ± b (n=2 or 3)
-  const n    = randomInt(2, 3)
-  const aH   = randomInt(1, 3)
-  const bH   = randomInt(1, 5) * (randomInt(0,1) === 0 ? 1 : -1)
-
-  // 1次側: cx ± d
-  const c    = randomInt(1, 4)
-  const d    = randomInt(1, 8) * (randomInt(0,1) === 0 ? 1 : -1)
-
-  const highStr   = polyStr(aH, n, bH)       // 高次項 文字列
-  const linearStr = polyStr(c, 1, d)          // 1次項 文字列
-
-  const fStr = highLeft ? highStr  : linearStr
-  const gStr = highLeft ? linearStr : highStr
-
-  const dfStr = highLeft ? diffPolyStr(aH, n) : diffPolyStr(c, 1)  // D(f)
-  const dgStr = highLeft ? diffPolyStr(c, 1)  : diffPolyStr(aH, n) // D(g)
-
-  // 穴埋め：左右ランダム
-  const askLeft = randomInt(0, 1) === 0
-  const correct = askLeft ? dfStr : dgStr
-
-  // 公式展開行
-  const formulaLine = `${applyNotation(notation, fStr)} \\cdot (${gStr}) + (${fStr}) \\cdot ${applyNotation(notation, gStr)}`
-
-  // 穴埋め行
-  const blankLine = askLeft
-    ? `\\square \\cdot (${gStr}) + (${fStr}) \\cdot ${applyNotation(notation, gStr)}`
-    : `${applyNotation(notation, fStr)} \\cdot (${gStr}) + (${fStr}) \\cdot \\square`
-
-  // 不正解選択肢
-  const makeWrongs = (correct, a, n) => {
-    if (n === 1) {
-      // D(ax+b)=a の間違いパターン
-      return [`${a}x`, `${a+1}`, `0`]
-    } else {
-      // D(ax^n+b)=an·x^{n-1} の間違いパターン
-      const coef = a * n
-      return [
-        `${coef}x^{${n}}`,       // 指数-1忘れ
-        `x^{${n-1}}`,            // 係数忘れ
-        `${coef+1}x^{${n-1}}`,  // 係数ミス
-      ]
-    }
+  if (pat === 0) {
+    // (ax^n + b)(cx + d)  n次×1次
+    n = randomInt(2, 3); m = 1
+    a = randomInt(1, 3) * (randomInt(0,1) ? 1 : -1)
+    b = randomInt(1, 6) * (randomInt(0,1) ? 1 : -1)
+    c = randomInt(1, 4); d = randomInt(1, 8) * (randomInt(0,1) ? 1 : -1)
+    return buildProblem2x2(a, n, b, c, m, d)
+  } else if (pat === 1) {
+    // (ax + b)(cx^m + d)  1次×m次
+    n = 1; m = randomInt(2, 3)
+    a = randomInt(1, 4); b = randomInt(1, 8) * (randomInt(0,1) ? 1 : -1)
+    c = randomInt(1, 3) * (randomInt(0,1) ? 1 : -1)
+    d = randomInt(1, 6) * (randomInt(0,1) ? 1 : -1)
+    return buildProblem2x2(a, n, b, c, m, d)
+  } else if (pat === 2) {
+    // (ax^n + b)(cx^m + d)  n次×m次
+    n = randomInt(2, 3); m = randomInt(2, 3)
+    a = randomInt(1, 3) * (randomInt(0,1) ? 1 : -1)
+    b = randomInt(1, 5) * (randomInt(0,1) ? 1 : -1)
+    c = randomInt(1, 3) * (randomInt(0,1) ? 1 : -1)
+    d = randomInt(1, 5) * (randomInt(0,1) ? 1 : -1)
+    return buildProblem2x2(a, n, b, c, m, d)
+  } else if (pat === 3) {
+    // (ax^2 + b)(cx^2 + dx + e)
+    const aa = randomInt(1, 3) * (randomInt(0,1) ? 1 : -1)
+    const bb = randomInt(1, 5) * (randomInt(0,1) ? 1 : -1)
+    const cc = randomInt(1, 3) * (randomInt(0,1) ? 1 : -1)
+    const dd = randomInt(1, 4) * (randomInt(0,1) ? 1 : -1)
+    const ee = randomInt(1, 6) * (randomInt(0,1) ? 1 : -1)
+    return buildProblem2x3(aa, 2, bb, cc, 2, dd, 1, ee)
+  } else if (pat === 4) {
+    // (ax^3 + b)(cx^2 + dx + e)
+    const aa = randomInt(1, 2) * (randomInt(0,1) ? 1 : -1)
+    const bb = randomInt(1, 5) * (randomInt(0,1) ? 1 : -1)
+    const cc = randomInt(1, 3) * (randomInt(0,1) ? 1 : -1)
+    const dd = randomInt(1, 4) * (randomInt(0,1) ? 1 : -1)
+    const ee = randomInt(1, 5) * (randomInt(0,1) ? 1 : -1)
+    return buildProblem2x3(aa, 3, bb, cc, 2, dd, 1, ee)
+  } else {
+    // (ax^2 + b)(cx^3 + dx^2 + e)
+    const aa = randomInt(1, 3) * (randomInt(0,1) ? 1 : -1)
+    const bb = randomInt(1, 5) * (randomInt(0,1) ? 1 : -1)
+    const cc = randomInt(1, 2) * (randomInt(0,1) ? 1 : -1)
+    const dd = randomInt(1, 3) * (randomInt(0,1) ? 1 : -1)
+    const ee = randomInt(1, 5) * (randomInt(0,1) ? 1 : -1)
+    return buildProblem2x3(aa, 2, bb, cc, 3, dd, 2, ee)
   }
+}
 
-  const wrongs = askLeft
-    ? makeWrongs(correct, highLeft ? aH : c, highLeft ? n : 1)
-    : makeWrongs(correct, highLeft ? c : aH, highLeft ? 1 : n)
+// Stage1を2問、Stage2を3問、以降Stage3（3連続正解でクリア）
+const INIT_S1      = 2
+const INIT_S2      = 3
+const FINAL_STREAK = 3
 
-  return {
-    notation,
-    fStr, gStr, dfStr, dgStr,
-    askLeft, correct,
-    formulaLine, blankLine,
-    blankQuestion: `\\square = ?`,
-    question: applyNotationOuter(notation, `(${fStr})(${gStr})`),
-    choices: shuffleArray([correct, ...wrongs]),
-  }
+function getScaffold(count) {
+  if (count < INIT_S1) return 1
+  if (count < INIT_S1 + INIT_S2) return 2
+  return 3
 }
 
 // ── メインコンポーネント ─────────────────────────────────
 export default function Step7() {
   const navigate = useNavigate()
-  const [problem, setProblem]           = useState(generateProblem())
-  const [selectedAnswer, setSelectedAnswer] = useState(null)
-  const [message, setMessage]           = useState('')
-  const [prepNum, setPrepNum]           = useState(null)
+  const [count,   setCount]   = useState(0)
+  const [streak,  setStreak]  = useState(0)
+  const [cleared, setCleared] = useState(false)
+  const [problem, setProblem] = useState(() => generateProblem())
+  const [prepNum, setPrepNum] = useState(null)
 
-  const checkAnswer = (answer) => {
-    if (selectedAnswer !== null) return
-    setSelectedAnswer(answer)
-    setMessage(answer === problem.correct ? '⭕' : '❌')
+  // Stage1 用
+  const [inputs,      setInputs]      = useState({ 1:'', 2:'', 3:'' })
+  const [blankSt,     setBlankSt]     = useState({ 1:null, 2:null, 3:null })
+  const [activeBlank, setActiveBlank] = useState(1)
+
+  // Stage2・3 用
+  const [answer, setAnswer] = useState('')
+  const [msg,    setMsg]    = useState('')
+  const [locked, setLocked] = useState(false)
+
+  const scaffold   = getScaffold(count)
+  const allCorrect = blankSt[1]==='correct' && blankSt[2]==='correct' && blankSt[3]==='correct'
+
+  function resetStates() {
+    setInputs({ 1:'', 2:'', 3:'' })
+    setBlankSt({ 1:null, 2:null, 3:null })
+    setActiveBlank(1)
+    setAnswer(''); setMsg(''); setLocked(false)
   }
 
-  const nextProblem = () => {
-    setSelectedAnswer(null)
-    setMessage('')
+  function advance() {
+    const nextCount = count + 1
+    if (scaffold === 3) {
+      const newStreak = streak + 1
+      if (newStreak >= FINAL_STREAK) { setCleared(true); resetStates(); return }
+      setStreak(newStreak)
+    } else {
+      setStreak(0)
+    }
+    setCount(nextCount)
     setProblem(generateProblem())
+    resetStates()
   }
 
-  // 例示：記号3種それぞれ1つ
-  const examples = [
-    // D( ) 記号
-    {
-      formula: String.raw`\begin{aligned}
-        D\{(x^2-1)(3x+2)\}
-          &= D(x^2-1) \cdot (3x+2) + (x^2-1) \cdot D(3x+2) \\
-          &= 2x(3x+2) + (x^2-1) \cdot 3
-      \end{aligned}`,
+  // Stage1 キーボード操作
+  const kb1 = {
+    key: (v) => {
+      if (blankSt[activeBlank] === 'correct') return
+      setInputs(p => ({ ...p, [activeBlank]: p[activeBlank] + v }))
+      if (blankSt[activeBlank] === 'wrong') setBlankSt(p => ({ ...p, [activeBlank]: null }))
     },
-    // ( )' 記号
-    {
-      formula: String.raw`\begin{aligned}
-        \{(x+2)(2x^2-5)\}'
-          &= (x+2)' \cdot (2x^2-5) + (x+2) \cdot (2x^2-5)' \\
-          &= 1 \cdot (2x^2-5) + (x+2) \cdot 4x
-      \end{aligned}`,
+    del: () => {
+      if (blankSt[activeBlank] === 'correct') return
+      setInputs(p => ({ ...p, [activeBlank]: p[activeBlank].slice(0,-1) }))
+      if (blankSt[activeBlank] === 'wrong') setBlankSt(p => ({ ...p, [activeBlank]: null }))
     },
-    // d/dx( ) 記号
-    {
-      formula: String.raw`\begin{aligned}
-        \dfrac{d}{dx}\{(x^3+1)(2x-3)\}
-          &= \dfrac{d}{dx}(x^3+1) \cdot (2x-3) + (x^3+1) \cdot \dfrac{d}{dx}(2x-3) \\
-          &= 3x^2(2x-3) + (x^3+1) \cdot 2
-      \end{aligned}`,
+    enter: () => {
+      if (blankSt[activeBlank] === 'correct') return
+      const val = inputs[activeBlank]
+      if (!val) return
+      const ans = activeBlank === 1 ? problem.dfStr
+                : activeBlank === 2 ? problem.term2Str
+                : problem.finalStr
+      const ok = checkAnswer(val, ans)
+      if (ok) {
+        const next = { ...blankSt, [activeBlank]: 'correct' }
+        setBlankSt(next)
+        const rem = [1,2,3].filter(id => next[id] !== 'correct')
+        if (rem.length > 0) setActiveBlank(rem[0])
+      } else {
+        setBlankSt(p => ({ ...p, [activeBlank]: 'wrong' }))
+      }
     },
-  ]
+  }
 
-  return (
-    <div style={{ padding: '20px', maxWidth: '700px', margin: '0 auto', fontFamily: 'sans-serif' }}>
-      <h1 style={{ textAlign: 'center', marginBottom: '20px' }}>Math Puzzle – Step 7</h1>
+  // Stage2・3 キーボード操作
+  const kb2 = {
+    key: (v) => { if (locked) return; if (msg==='❌') setMsg(''); setAnswer(s=>s+v) },
+    del: ()  => { if (locked) return; if (msg==='❌') setMsg(''); setAnswer(s=>s.slice(0,-1)) },
+    enter: () => {
+      if (locked || !answer) return
+      const ok = checkAnswer(answer, problem.finalStr)
+      if (ok) { setMsg('⭕'); setLocked(true) } else { setMsg('❌') }
+    },
+  }
 
-      {/* 例示エリア */}
-      <div style={{
-        background: '#1a1a2e', border: '1px solid #444',
-        borderRadius: '12px', padding: '16px 24px', marginBottom: '24px',
-      }}>
-        <BlockMath math={String.raw`\boxed{\times = \cdot}`} />
-        <BlockMath math={String.raw`D\{f \cdot g\} = D(f) \cdot g + f \cdot D(g)`} />
-        <BlockMath math={String.raw`\,`} />
-
-        {examples.map((ex, i) => (
-          <div key={i}>
-            {/* 計算式 */}
-            <BlockMath math={ex.formula} />
-            {/* バッジを式の下に横並び */}
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '4px', marginBottom: '4px' }}>
-              <PrepBadge num={2} onClick={() => setPrepNum(2)} />
-              <PrepBadge num={3} onClick={() => setPrepNum(3)} />
-            </div>
-            {i < examples.length - 1 && <BlockMath math={String.raw`\,`} />}
-          </div>
-        ))}
-      </div>
-
-      {/* 問題エリア */}
-      <div style={{
-        background: '#0d2137', border: '2px solid #4db8ff',
-        borderRadius: '12px', padding: '16px 24px', marginBottom: '12px',
-      }}>
-        <BlockMath math={
-          `\\begin{aligned}
-            ${problem.question} &= ${problem.formulaLine} \\\\
-            &= ${problem.blankLine}
-          \\end{aligned}`
-        } />
-        <div style={{ textAlign: 'center', color: '#4db8ff', fontWeight: 'bold' }}>
-          <BlockMath math={problem.blankQuestion} />
-        </div>
-      </div>
-
-      {/* 選択肢 */}
-      <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '24px' }}>
-        {problem.choices.map((choice) => (
-          <button
-            key={choice}
-            onClick={() => checkAnswer(choice)}
-            style={{
-              padding: '12px 20px', fontSize: '22px', borderRadius: '10px',
-              border: '2px solid #555', cursor: 'pointer',
-              backgroundColor:
-                selectedAnswer === choice
-                  ? choice === problem.correct ? '#2d6a2d' : '#6a2d2d'
-                  : '#2a2a3e',
-              color: 'white', minWidth: '80px', textAlign: 'center',
-            }}
-          >
-            <BlockMath math={choice} />
-          </button>
-        ))}
-      </div>
-
-      {/* メッセージ */}
-      <h2 style={{ textAlign: 'center', fontSize: '48px', margin: '0 0 16px' }}>{message}</h2>
-
-      {/* ボタン */}
-      <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-        <button onClick={nextProblem} style={{
-          padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
-          border: 'none', backgroundColor: '#1a6ef5', color: 'white',
-          cursor: 'pointer', fontWeight: 'bold',
-        }}>
-          Next
+  // ── クリア画面 ─────────────────────────────────────────
+  if (cleared) return (
+    <div style={{ padding:'20px', maxWidth:'700px', margin:'0 auto', fontFamily:'sans-serif', textAlign:'center' }}>
+      <h1 style={{ marginBottom:'24px' }}>Math Puzzle – Step 7</h1>
+      <div style={{ fontSize:'80px', margin:'16px 0' }}>🏆</div>
+      <div style={{ fontSize:'48px' }}>🎉</div>
+      <div style={{ display:'flex', gap:'16px', justifyContent:'center', marginTop:'32px' }}>
+        <button onClick={() => { setCount(0); setStreak(0); setCleared(false); setProblem(generateProblem()); resetStates() }}
+          style={{ padding:'14px 32px', fontSize:'28px', borderRadius:'10px', border:'none', backgroundColor:'#1a6ef5', color:'white', cursor:'pointer' }}>
+          🔁
         </button>
-        <button onClick={() => navigate('/')} style={{
-          padding: '14px 32px', fontSize: '18px', borderRadius: '10px',
-          border: '1px solid #555', backgroundColor: 'transparent',
-          color: '#aaa', cursor: 'pointer',
-        }}>
+        <button onClick={() => navigate('/')}
+          style={{ padding:'14px 28px', fontSize:'18px', borderRadius:'10px', border:'1px solid #555', backgroundColor:'transparent', color:'#aaa', cursor:'pointer' }}>
           ← Home
         </button>
       </div>
+    </div>
+  )
 
-      {/* Prepポップアップ */}
-      {prepNum !== null && (
-        <PrepPopup num={prepNum} onClose={() => setPrepNum(null)} />
+  // ── メイン画面 ─────────────────────────────────────────
+  return (
+    <div style={{ padding:'20px', maxWidth:'700px', margin:'0 auto', fontFamily:'sans-serif' }}>
+      <h1 style={{ textAlign:'center', marginBottom:'16px' }}>Math Puzzle – Step 7</h1>
+
+      {/* 進捗バッジ */}
+      <div style={{ display:'flex', justifyContent:'center', gap:'8px', marginBottom:'16px', flexWrap:'wrap' }}>
+        <span style={{
+          padding:'4px 14px', borderRadius:'20px', fontSize:'14px', fontWeight:'bold',
+          backgroundColor:'#2d6a2d', color:'white',
+        }}>
+          {count + 1}
+        </span>
+        <span style={{
+          padding:'4px 14px', borderRadius:'20px', fontSize:'14px', fontWeight:'bold',
+          backgroundColor:'#333', color:'white',
+        }}>
+          {scaffold===1 ? '🧩 Stage 1' : scaffold===2 ? '📝 Stage 2' : '🎯 Stage 3'}
+        </span>
+        {scaffold===3 && (
+          <span style={{
+            padding:'4px 14px', borderRadius:'20px', fontSize:'14px', fontWeight:'bold',
+            backgroundColor:'#5a4a00', color:'#ffe07a',
+          }}>
+            🏁 {streak} / {FINAL_STREAK}
+          </span>
+        )}
+      </div>
+
+      {/* 例示エリア */}
+      <div style={{ background:'#1a1a2e', border:'1px solid #444', borderRadius:'12px', padding:'16px 24px', marginBottom:'24px' }}>
+        <BlockMath math={String.raw`D\{f \cdot g\} = D(f)\cdot g + f\cdot D(g)`} />
+        <BlockMath math={String.raw`\,`} />
+        <BlockMath math={String.raw`\begin{aligned}
+          D\{(x^2+3)(2x^2-x+1)\}
+          &= D(x^2+3)\cdot(2x^2-x+1)+(x^2+3)\cdot D(2x^2-x+1)\\
+          &= 2x(2x^2-x+1)+(x^2+3)\cdot(4x-1)\\
+          &= 4x^3-2x^2+2x+4x^3-x^2+12x-3\\
+          &= 8x^3-3x^2+14x-3
+        \end{aligned}`} />
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:'6px', marginTop:'4px' }}>
+          <PrepBadge num={2} onClick={() => setPrepNum(2)} />
+          <PrepBadge num={3} onClick={() => setPrepNum(3)} />
+        </div>
+      </div>
+
+      {/* 問題エリア */}
+      <div style={{ background:'#0d2137', border:'2px solid #4db8ff', borderRadius:'12px', padding:'16px 24px', marginBottom:'16px' }}>
+
+        {/* Stage1：穴埋め3か所 */}
+        {scaffold === 1 && (<>
+          <div style={{ overflowX:'auto' }}>
+            <BlockMath math={`${problem.q}=D(${problem.fStr})\\cdot(${problem.gStr})+(${problem.fStr})\\cdot D(${problem.gStr})`} />
+          </div>
+          <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:'4px', margin:'6px 0 6px 24px' }}>
+            <span style={{ color:'#ccc', fontSize:'18px' }}>=</span>
+            <BlankBox
+              value={inputs[1]} status={blankSt[1]}
+              active={activeBlank===1 && blankSt[1]!=='correct'}
+              onClick={() => { if (blankSt[1]!=='correct') setActiveBlank(1) }}
+            />
+            <InlineMath math={`\\cdot(${problem.gStr})+(${problem.fStr})\\cdot(${problem.dgStr})`} />
+            {blankSt[1]==='wrong'   && <span style={{ fontSize:'20px' }}>🔄</span>}
+            {blankSt[1]==='correct' && <span style={{ fontSize:'18px' }}>⭕</span>}
+          </div>
+          <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:'4px', margin:'6px 0 6px 24px' }}>
+            <span style={{ color:'#ccc', fontSize:'18px' }}>=</span>
+            <InlineMath math={problem.term1Str + '+'} />
+            <BlankBox
+              value={inputs[2]} status={blankSt[2]}
+              active={activeBlank===2 && blankSt[2]!=='correct'}
+              onClick={() => { if (blankSt[2]!=='correct') setActiveBlank(2) }}
+            />
+            {blankSt[2]==='wrong'   && <span style={{ fontSize:'20px' }}>🔄</span>}
+            {blankSt[2]==='correct' && <span style={{ fontSize:'18px' }}>⭕</span>}
+          </div>
+          <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:'4px', margin:'6px 0 6px 24px' }}>
+            <span style={{ color:'#ccc', fontSize:'18px' }}>=</span>
+            <BlankBox
+              value={inputs[3]} status={blankSt[3]}
+              active={activeBlank===3 && blankSt[3]!=='correct'}
+              onClick={() => { if (blankSt[3]!=='correct') setActiveBlank(3) }}
+            />
+            {blankSt[3]==='wrong'   && <span style={{ fontSize:'20px' }}>🔄</span>}
+            {blankSt[3]==='correct' && <span style={{ fontSize:'18px' }}>⭕</span>}
+          </div>
+        </>)}
+
+        {/* Stage2：公式ヒントあり＋最終答えだけ入力 */}
+        {scaffold === 2 && (<>
+          <div style={{ overflowX:'auto' }}>
+            <BlockMath math={`${problem.q}=D(${problem.fStr})\\cdot(${problem.gStr})+(${problem.fStr})\\cdot D(${problem.gStr})`} />
+          </div>
+          <BlockMath math={`${problem.q}=\\,?`} />
+        </>)}
+
+        {/* Stage3：問題だけ */}
+        {scaffold === 3 && (
+          <BlockMath math={`${problem.q}=\\,?`} />
+        )}
+      </div>
+
+      {/* Stage2・3 の入力プレビュー */}
+      {scaffold !== 1 && !locked && (
+        <div style={{ marginBottom:'8px' }}>
+          <CaretGuide />
+          <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:'12px', flexWrap:'wrap' }}>
+            <span style={{ color:'#4db8ff', fontSize:'18px' }}>=</span>
+            <div style={singleBoxStyle(msg==='❌')}>{answer || '?'}</div>
+            {answer && (<>
+              <span style={{ color:'#888', fontSize:'14px' }}>→</span>
+              <div style={{ background:'#1a2e1a', border:'1.5px solid #4dff88', borderRadius:'6px', padding:'4px 12px', color:'#88ff88', minWidth:'60px', textAlign:'center' }}>
+                <InlineMath math={toKatex(answer)} />
+              </div>
+            </>)}
+          </div>
+        </div>
       )}
+
+      {/* 判定メッセージ（Stage2・3） */}
+      {scaffold !== 1 && (
+        <div style={{ textAlign:'center', minHeight:'60px', display:'flex', alignItems:'center', justifyContent:'center' }}>
+          {msg && (
+            <div>
+              <span style={{ fontSize:'48px' }}>{msg}</span>
+              {msg==='❌' && <div style={{ fontSize:'32px', marginTop:'2px' }}>🔄</div>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* キーボード / Next ボタン */}
+      {scaffold === 1 ? (
+        allCorrect ? (
+          <div style={{ textAlign:'center', marginTop:'8px' }}>
+            <button onClick={advance} style={{
+              padding:'14px 40px', fontSize:'20px', borderRadius:'10px',
+              border:'none', backgroundColor:'#1a6ef5', color:'white', cursor:'pointer', fontWeight:'bold',
+            }}>Next ▶</button>
+          </div>
+        ) : (
+          <>
+            <CaretGuide />
+            <NumKeyboard onKey={kb1.key} onDelete={kb1.del} onEnter={kb1.enter} />
+          </>
+        )
+      ) : (
+        locked ? (
+          <div style={{ textAlign:'center', marginTop:'8px' }}>
+            <button onClick={advance} style={{
+              padding:'14px 40px', fontSize:'20px', borderRadius:'10px',
+              border:'none', backgroundColor:'#1a6ef5', color:'white', cursor:'pointer', fontWeight:'bold',
+            }}>Next ▶</button>
+          </div>
+        ) : (
+          <NumKeyboard onKey={kb2.key} onDelete={kb2.del} onEnter={kb2.enter} />
+        )
+      )}
+
+      {/* Homeボタン */}
+      <div style={{ marginTop:'24px', textAlign:'center' }}>
+        <button onClick={() => navigate('/')} style={{
+          padding:'12px 28px', fontSize:'16px', borderRadius:'10px',
+          border:'1px solid #555', backgroundColor:'transparent', color:'#aaa', cursor:'pointer',
+        }}>← Home</button>
+      </div>
+
+      {prepNum !== null && <PrepPopup num={prepNum} onClose={() => setPrepNum(null)} />}
     </div>
   )
 }
