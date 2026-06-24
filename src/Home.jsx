@@ -22,6 +22,7 @@ const levels = [
       { label: 'Step 5', path: '/step5' },
       { label: 'Step 6', path: '/step6' },
       { label: 'Step 7', path: '/step7' },
+      { label: 'Step 8', path: '/step8' },
     ],
   },
 ]
@@ -86,7 +87,6 @@ export default function Home() {
           </span>
         </div>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          {/* WarmUp1 ボタン（実装済み） */}
           <button
             onClick={() => navigate('/warmup1')}
             style={{
@@ -102,8 +102,6 @@ export default function Home() {
           >
             WarmUp 1
           </button>
-
-          {/* WarmUp2 ボタン（実装済み）← 6-7-26 Coming Soonから変更 */}
           <button
             onClick={() => navigate('/warmup2')}
             style={{
@@ -119,7 +117,6 @@ export default function Home() {
           >
             WarmUp 2
           </button>
-          {/* WarmUp3 ボタン（実装済み）← 6-12-26 追加 */}
           <button
             onClick={() => navigate('/warmup3')}
             style={{
@@ -152,7 +149,6 @@ export default function Home() {
           </span>
         </div>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          {/* Prep1 ボタン（実装済み）← 6-14-26 追加 */}
           <button
             onClick={() => navigate('/prep1')}
             style={{
@@ -168,7 +164,6 @@ export default function Home() {
           >
             Prep 1
           </button>
-          {/* Prep2・Prep3は準備中 */}
           <button
             onClick={() => navigate('/prep2')}
             style={{
