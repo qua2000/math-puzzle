@@ -25,6 +25,12 @@ const levels = [
       { label: 'Step 8', path: '/step8' },
     ],
   },
+  {
+    title: 'Level 4',
+    steps: [
+      { label: 'Step 9', path: '/step9' },
+    ],
+  },
 ]
 
 // ── Coming Soon ポップアップ ─────────────────────────────
