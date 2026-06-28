@@ -71,6 +71,7 @@ const SETS = [
       s2Show: '3x^{-1}',
       s2Ans: ['-3x^{-2}', '-3x^-2'],
       s2Katex: '-3x^{-2}',
+      hint: ["(4x^{-1})'", '= 4 \\times (-1) \\cdot x^{-1-1}', '= -4x^{-2}'],
     },
   },
   // ─── A-2: (x^{-2})' ──────────────────────────────────
@@ -86,6 +87,7 @@ const SETS = [
       s2Show: 'x^{-2}',
       s2Ans: ['-2x^{-3}', '-2x^-3'],
       s2Katex: '-2x^{-3}',
+      hint: ["(3x^{-2})'", '= 3 \\times (-2) \\cdot x^{-2-1}', '= -6x^{-3}'],
     },
   },
   // ─── A-3: (3x^{-2})' ─────────────────────────────────
@@ -101,6 +103,7 @@ const SETS = [
       s2Show: '3x^{-2}',
       s2Ans: ['-6x^{-3}', '-6x^-3'],
       s2Katex: '-6x^{-3}',
+      hint: ["(2x^{-2})'", '= 2 \\times (-2) \\cdot x^{-2-1}', '= -4x^{-3}'],
     },
   },
   // ─── A-4: (x^{-3})' ──────────────────────────────────
@@ -116,6 +119,7 @@ const SETS = [
       s2Show: 'x^{-3}',
       s2Ans: ['-3x^{-4}', '-3x^-4'],
       s2Katex: '-3x^{-4}',
+      hint: ["(2x^{-3})'", '= 2 \\times (-3) \\cdot x^{-3-1}', '= -6x^{-4}'],
     },
   },
   // ─── A-5: (2x^{-3})' ─────────────────────────────────
@@ -131,6 +135,7 @@ const SETS = [
       s2Show: '2x^{-3}',
       s2Ans: ['-6x^{-4}', '-6x^-4'],
       s2Katex: '-6x^{-4}',
+      hint: ["(4x^{-3})'", '= 4 \\times (-3) \\cdot x^{-3-1}', '= -12x^{-4}'],
     },
   },
   // ─── B: (3/x)' ───────────────────────────────────────
@@ -158,6 +163,7 @@ const SETS = [
       s2Show: '3x^{-1}',
       s2Ans: ['-3x^{-2}', '-3/x^2', '-3x^-2'],
       s2Katex: '-3x^{-2} = -\\dfrac{3}{x^2}',
+      hint: ["(4x^{-1})'", '= 4 \\times (-1) \\cdot x^{-1-1}', '= -4x^{-2}'],
     },
   },
   // ─── C: (3/4x)' ──────────────────────────────────────
@@ -186,6 +192,7 @@ const SETS = [
       s2Show: '\\dfrac{3}{4}x^{-1}',
       s2Ans: ['-(3/4)x^{-2}', '-3/(4x^2)', '-(3/4)x^-2', '-3/4x^{-2}', '-3/4x^-2'],
       s2Katex: '-\\dfrac{3}{4}x^{-2} = -\\dfrac{3}{4x^2}',
+      hint: ["\\left(\\dfrac{1}{2}x^{-1}\\right)'", '= \\dfrac{1}{2} \\times (-1) \\cdot x^{-1-1}', '= -\\dfrac{1}{2}x^{-2}'],
     },
   },
   // ─── D: (-3/x)' ──────────────────────────────────────
@@ -214,6 +221,7 @@ const SETS = [
       s2Show: '-3x^{-1}',
       s2Ans: ['3x^{-2}', '3/x^2', '3x^-2'],
       s2Katex: '3x^{-2} = \\dfrac{3}{x^2}',
+      hint: ["(-2x^{-1})'", '= -2 \\times (-1) \\cdot x^{-1-1}', '= 2x^{-2}'],
     },
   },
   // ─── E: (-3/4x)' ─────────────────────────────────────
@@ -242,6 +250,7 @@ const SETS = [
       s2Show: '-\\dfrac{3}{4}x^{-1}',
       s2Ans: ['(3/4)x^{-2}', '3/(4x^2)', '(3/4)x^-2', '3/4x^{-2}', '3/4x^-2'],
       s2Katex: '\\dfrac{3}{4}x^{-2} = \\dfrac{3}{4x^2}',
+      hint: ["\\left(-\\dfrac{1}{2}x^{-1}\\right)'", '= -\\dfrac{1}{2} \\times (-1) \\cdot x^{-1-1}', '= \\dfrac{1}{2}x^{-2}'],
     },
   },
   // ─── F: (3/x^2)' ─────────────────────────────────────
@@ -269,6 +278,7 @@ const SETS = [
       s2Show: '3x^{-2}',
       s2Ans: ['-6x^{-3}', '-6/x^3', '-6x^-3'],
       s2Katex: '-6x^{-3} = -\\dfrac{6}{x^3}',
+      hint: ["(2x^{-2})'", '= 2 \\times (-2) \\cdot x^{-2-1}', '= -4x^{-3}'],
     },
   },
   // ─── G: (1/2x^2)' ────────────────────────────────────
@@ -297,6 +307,7 @@ const SETS = [
       s2Show: '\\dfrac{1}{2}x^{-2}',
       s2Ans: ['-x^{-3}', '-1/x^3', '-x^-3', '-1x^{-3}'],
       s2Katex: '-x^{-3} = -\\dfrac{1}{x^3}',
+      hint: ["\\left(\\dfrac{1}{3}x^{-2}\\right)'", '= \\dfrac{1}{3} \\times (-2) \\cdot x^{-2-1}', '= -\\dfrac{2}{3}x^{-3}'],
     },
   },
   // ─── H: (3/x^3)' ─────────────────────────────────────
@@ -324,6 +335,7 @@ const SETS = [
       s2Show: '3x^{-3}',
       s2Ans: ['-9x^{-4}', '-9/x^4', '-9x^-4'],
       s2Katex: '-9x^{-4} = -\\dfrac{9}{x^4}',
+      hint: ["(2x^{-3})'", '= 2 \\times (-3) \\cdot x^{-3-1}', '= -6x^{-4}'],
     },
   },
   // ─── I: (3/4x^3)' ────────────────────────────────────
@@ -352,6 +364,7 @@ const SETS = [
       s2Show: '\\dfrac{3}{4}x^{-3}',
       s2Ans: ['-(9/4)x^{-4}', '-9/(4x^4)', '-(9/4)x^-4', '-9/4x^{-4}', '-9/4x^-4'],
       s2Katex: '-\\dfrac{9}{4}x^{-4} = -\\dfrac{9}{4x^4}',
+      hint: ["\\left(\\dfrac{2}{5}x^{-3}\\right)'", '= \\dfrac{2}{5} \\times (-3) \\cdot x^{-3-1}', '= -\\dfrac{6}{5}x^{-4}'],
     },
   },
   // ─── J: (-3/x^2)' ────────────────────────────────────
@@ -380,6 +393,7 @@ const SETS = [
       s2Show: '-3x^{-2}',
       s2Ans: ['6x^{-3}', '6/x^3', '6x^-3'],
       s2Katex: '6x^{-3} = \\dfrac{6}{x^3}',
+      hint: ["(-2x^{-2})'", '= -2 \\times (-2) \\cdot x^{-2-1}', '= 4x^{-3}'],
     },
   },
   // ─── K: (-3/4x^2)' ───────────────────────────────────
@@ -408,6 +422,7 @@ const SETS = [
       s2Show: '-\\dfrac{3}{4}x^{-2}',
       s2Ans: ['(3/2)x^{-3}', '3/(2x^3)', '(3/2)x^-3', '3/2x^{-3}', '3/2x^-3'],
       s2Katex: '\\dfrac{3}{2}x^{-3} = \\dfrac{3}{2x^3}',
+      hint: ["\\left(-\\dfrac{2}{3}x^{-2}\\right)'", '= -\\dfrac{2}{3} \\times (-2) \\cdot x^{-2-1}', '= \\dfrac{4}{3}x^{-3}'],
     },
   },
   // ─── L: (-3/x^3)' ────────────────────────────────────
@@ -436,6 +451,7 @@ const SETS = [
       s2Show: '-3x^{-3}',
       s2Ans: ['9x^{-4}', '9/x^4', '9x^-4'],
       s2Katex: '9x^{-4} = \\dfrac{9}{x^4}',
+      hint: ["(-2x^{-3})'", '= -2 \\times (-3) \\cdot x^{-3-1}', '= 6x^{-4}'],
     },
   },
   // ─── M: x^m・x^n ─────────────────────────────────────
@@ -444,15 +460,15 @@ const SETS = [
     ex1: {
       solution: [
         "(x^2 \\cdot x^3)'",
-        '= (x^{2+3})',
-        '= (x^5)',
+        "= (x^{2+3})'",
+        "= (x^5)'",
         '= 5x^4',
       ],
     },
     ex2: {
       solution: [
         "(x^3 \\cdot x^4)'",
-        '= (x^7)',
+        "= (x^7)'",
         '= 7x^6',
       ],
     },
@@ -464,6 +480,7 @@ const SETS = [
       s2Show: 'x^6',
       s2Ans: ['6x^5'],
       s2Katex: '6x^5',
+      hint: ["(x^3 \\cdot x^4)'", '= (x^{3+4})', '= (x^7)', '= 7x^6'],
     },
   },
   // ─── N: x^m/x^n ──────────────────────────────────────
@@ -472,15 +489,15 @@ const SETS = [
     ex1: {
       solution: [
         "\\left(\\dfrac{x^5}{x^2}\\right)'",
-        '= (x^{5-2})',
-        '= (x^3)',
+        "= (x^{5-2})'",
+        "= (x^3)'",
         '= 3x^2',
       ],
     },
     ex2: {
       solution: [
         "\\left(\\dfrac{x^6}{x^2}\\right)'",
-        '= (x^4)',
+        "= (x^4)'",
         '= 4x^3',
       ],
     },
@@ -492,6 +509,7 @@ const SETS = [
       s2Show: 'x^4',
       s2Ans: ['4x^3'],
       s2Katex: '4x^3',
+      hint: ["\\left(\\dfrac{x^6}{x^2}\\right)'", '= (x^{6-2})', '= (x^4)', '= 4x^3'],
     },
   },
   // ─── O: (x^m)^n ──────────────────────────────────────
@@ -500,15 +518,15 @@ const SETS = [
     ex1: {
       solution: [
         "((x^2)^3)'",
-        '= (x^{2 \\times 3})',
-        '= (x^6)',
+        "= (x^{2 \\times 3})'",
+        "= (x^6)'",
         '= 6x^5',
       ],
     },
     ex2: {
       solution: [
         "((x^3)^2)'",
-        '= (x^6)',
+        "= (x^6)'",
         '= 6x^5',
       ],
     },
@@ -520,6 +538,7 @@ const SETS = [
       s2Show: 'x^8',
       s2Ans: ['8x^7'],
       s2Katex: '8x^7',
+      hint: ["((x^3)^2)'", '= (x^{3 \\times 2})', '= (x^6)', '= 6x^5'],
     },
   },
   // ─── P: (ax)^m ───────────────────────────────────────
@@ -528,15 +547,15 @@ const SETS = [
     ex1: {
       solution: [
         "((3x)^2)'",
-        '= (3^2 x^2)',
-        '= (9x^2)',
+        "= (3^2 x^2)'",
+        "= (9x^2)'",
         '= 18x',
       ],
     },
     ex2: {
       solution: [
         "((2x)^3)'",
-        '= (8x^3)',
+        "= (8x^3)'",
         '= 24x^2',
       ],
     },
@@ -548,6 +567,7 @@ const SETS = [
       s2Show: '16x^4',
       s2Ans: ['64x^3'],
       s2Katex: '64x^3',
+      hint: ["((3x)^2)'", '= (9x^2)', '= 18x'],
     },
   },
   // ─── Q: (a/x)^m ──────────────────────────────────────
@@ -576,6 +596,7 @@ const SETS = [
       s2Show: '16x^{-4}',
       s2Ans: ['-64x^{-5}', '-64/x^5', '-64x^-5'],
       s2Katex: '-64x^{-5} = -\\dfrac{64}{x^5}',
+      hint: ["\\left[\\left(\\dfrac{3}{x}\\right)^2\\right]'", '= (9x^{-2})', '= -18x^{-3}'],
     },
   },
 ]
@@ -660,12 +681,34 @@ export default function Step9() {
   const [st2, setSt2] = useState('')
   const [cleared, setCleared] = useState(false)
   const [doneCount, setDoneCount] = useState(0)
+  const [hintStep, setHintStep] = useState(0)
+  const [hintTimerId, setHintTimerId] = useState(null)
 
   const cur = SETS[setIdx]
   const total = SETS.length
 
+  function clearHintTimer(id) {
+    if (id) clearInterval(id)
+  }
+
+  function startHint(hint) {
+    setHintStep(1)
+    let step = 1
+    const id = setInterval(() => {
+      step += 1
+      if (step <= hint.length) {
+        setHintStep(step)
+      } else {
+        clearInterval(id)
+      }
+    }, 2000)
+    setHintTimerId(id)
+  }
+
   function reset() {
     setPhase(1); setAns1(''); setAns2(''); setSt1(''); setSt2('')
+    setHintStep(0)
+    setHintTimerId(prev => { clearHintTimer(prev); return null })
   }
 
   function advance() {
@@ -697,8 +740,17 @@ export default function Step9() {
         else setSt1('ng')
       } else {
         if (st2 === 'ok' || !ans2) return
-        if (checkAns(ans2, cur.q.s2Ans)) { setSt2('ok'); setDoneCount(c => c + 1) }
-        else setSt2('ng')
+        if (checkAns(ans2, cur.q.s2Ans)) {
+          setSt2('ok'); setDoneCount(c => c + 1)
+          setHintStep(0)
+          setHintTimerId(prev => { clearHintTimer(prev); return null })
+        } else {
+          setSt2('ng')
+          if (hintStep === 0 && cur.q.hint) {
+            clearHintTimer(hintTimerId)
+            startHint(cur.q.hint)
+          }
+        }
       }
     },
   }
@@ -844,6 +896,17 @@ export default function Step9() {
             {st2 === 'ng' && (
               <div style={{ textAlign: 'center', marginTop: '6px' }}>
                 <span style={{ fontSize: '36px' }}>❌</span><div style={{ fontSize: '28px' }}>🔄</div>
+              </div>
+            )}
+            {/* ヒント表示（不正解後・2秒間隔で段階表示） */}
+            {hintStep > 0 && cur.q.hint && (
+              <div style={{ marginTop: '12px', background: '#0f2a1a', border: '1.5px solid #44bb66', borderRadius: '8px', padding: '10px 14px' }}>
+                <div style={{ color: '#88ff88', fontSize: '13px', marginBottom: '6px', textAlign: 'center' }}>
+                  step :
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <BlockMath math={buildAligned(cur.q.hint.slice(0, hintStep))} />
+                </div>
               </div>
             )}
           </div>
